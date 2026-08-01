@@ -208,96 +208,84 @@ function HomeContent() {
       </header>
 
       {/* Main Home Dashboard Layout */}
-      <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center gap-8">
-        {/* Greetings & Streak Badge */}
-        <div className="flex items-start justify-between border-l-2 border-primary/20 pl-4 py-1">
+      <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center gap-5">
+        {/* Compact Greetings & Streak Badge */}
+        <div className="flex items-center justify-between border-l-2 border-primary/30 pl-3 py-1 bg-muted/20 rounded-r-xl px-2">
           <div className="text-left">
-            <span className="text-xs text-highlight font-serif font-bold tracking-widest uppercase block mb-1">매일의 서사</span>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground leading-relaxed animate-fade-in">
+            <h1 className="text-sm sm:text-base font-serif font-bold text-foreground leading-snug">
               {user?.role === "self" ? (
-                <>
-                  어서 오세요, 순자 님. <br />
-                  오늘 되짚어볼 옛 기억의 지면입니다.
-                </>
+                <>반갑습니다, <span className="text-primary">순자 님</span>. 오늘의 회상 지면입니다.</>
               ) : (
-                <>
-                  반갑습니다, 지영 님. <br />
-                  어머니의 흘러간 세월을 모아 기록해 주세요.
-                </>
+                <>반갑습니다, <span className="text-primary">지영 님</span>. 어머니의 기록 지면입니다.</>
               )}
             </h1>
           </div>
 
           {/* Streak Counter Badge */}
-          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-serif font-bold shadow-sm">
-            <Flame size={14} className="fill-orange-500 text-orange-500 animate-bounce" />
+          <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-serif font-bold shadow-sm">
+            <Flame size={13} className="fill-orange-500 text-orange-500 animate-bounce" />
             <span>{currentStreak}일 연속 회상 중</span>
           </div>
         </div>
 
-        {/* 1. Today's Question Card - Matte Stationery style */}
+        {/* 1. Today's Question Card - Soft Yellow Highlighted Mission 1 */}
         {todayQuestion ? (
-          <div className="w-full p-8 rounded-2xl bg-secondary border border-border shadow-sm text-left relative transition-colors duration-300">
-            {/* Tag badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/5 text-primary text-xs font-serif font-bold mb-6 border border-primary/10">
-              <MessageSquarePlus size={12} />
-              오늘 적을 회상 구절
+          <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative transition-all duration-300 flex flex-col gap-4">
+            {/* Mission Tag badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
+              <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
+              📌 오늘의 미션 1: 회상 구절 적기
             </div>
 
             {/* Question Text */}
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-foreground leading-loose select-text border-b border-border pb-6 mb-6">
+            <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
               &ldquo;{todayQuestion.question_text}&rdquo;
             </h3>
 
             {/* Primary Action Button */}
             <button
               onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
-              className="w-full py-3.5 text-lg font-serif font-bold bg-primary text-primary-foreground hover:opacity-90 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
+              className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
             >
-              기록하기
+              기록하기 ✦
             </button>
           </div>
         ) : (
-          <div className="w-full p-8 rounded-2xl bg-secondary border border-border text-center">
-            <p className="text-muted-foreground font-serif">오늘 하루의 회상 질문이 준비되어 있습니다.</p>
+          <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 text-center">
+            <p className="text-amber-900 dark:text-amber-200 font-serif text-sm">오늘 하루의 회상 질문이 준비되어 있습니다.</p>
           </div>
         )}
 
-        {/* 2. Daily Diary Container Card - Standalone Card */}
-        <div className="w-full p-7 rounded-2xl bg-background border border-border shadow-sm text-left relative flex flex-col gap-4">
+        {/* 2. Daily Diary Container Card - Soft Yellow Highlighted Mission 2 */}
+        <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-serif font-bold border border-amber-500/20">
-              <Sun size={13} className="text-amber-500" />
-              오늘의 소소한 일상 기록
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
+              <Sun size={13} className="text-amber-600 dark:text-amber-400" />
+              📌 오늘의 미션 2: 일상 일기 적기
             </div>
             {recentDiaries.length > 0 && (
-              <span className="text-[11px] text-muted-foreground font-serif">
-                최근 {recentDiaries.length}건 보관됨
+              <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
+                보관된 일기 {recentDiaries.length}건
               </span>
             )}
           </div>
 
-          <div>
-            <h4 className="text-lg font-serif font-bold text-foreground mb-1">
-              오늘 무슨 일이 있으셨나요?
-            </h4>
-            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
-              오늘 산책, 통화, 소소한 감정을 자유롭게 적어주시면 AI가 수학적 빈도 확률 알고리즘으로 회상 질문을 다듬어 드립니다.
-            </p>
-          </div>
+          <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
+            오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
+          </h4>
 
           {/* Show recent diary preview if exists */}
           {recentDiaries.length > 0 && (
-            <div className="p-3.5 rounded-xl bg-muted/30 border border-border/80 text-xs font-serif text-foreground/90 italic truncate">
+            <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
               &ldquo;{recentDiaries[0].content}&rdquo;
             </div>
           )}
 
           <button
             onClick={() => router.push("/daily-diary")}
-            className="w-full py-3 text-sm font-serif font-bold bg-background hover:bg-muted/50 text-foreground border border-border rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+            className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
           >
-            <Edit3 size={15} className="text-primary" />
+            <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
             오늘 일상 일기 적기 ✦
           </button>
         </div>
