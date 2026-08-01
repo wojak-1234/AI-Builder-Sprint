@@ -360,17 +360,22 @@ export const supabaseService = {
   },
 
   updateQuestionStatus: async (questionId: string, status: "pending" | "answered"): Promise<void> => {
-    if (isMockMode()) {
-      const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-      const idx = questions.findIndex((q) => q.id === questionId);
-      if (idx !== -1) {
-        questions[idx].status = status;
-        setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
-      }
-      return;
+    // Always update Local/In-Memory fallback store
+    const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+    const idx = questions.findIndex((q) => q.id === questionId);
+    if (idx !== -1) {
+      questions[idx].status = status;
+      setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
     }
-    const client = getSupabaseClient()!;
-    await client.from("questions_history").update({ status }).eq("id", questionId);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        await client.from("questions_history").update({ status }).eq("id", questionId);
+      } catch (err) {
+        console.warn("Supabase updateQuestionStatus warning:", err);
+      }
+    }
   },
 
   saveQuestionHistory: async (qHistory: DBQuestionHistory): Promise<void> => {

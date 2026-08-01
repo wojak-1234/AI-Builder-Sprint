@@ -545,6 +545,48 @@ Planner, Coder, Architect
 * [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (수정)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
 
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+모달 팝업 완전 제거 및 전용 개별 페이지 `/custom-topic`, `/daily-diary` 구축 + `/journal` 2단계(수단 선택 ➔ 전용 입력 폼) 입력 흐름 100% 통일.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+`CustomTopicModal` 모달 팝업을 폐지하고 전용 독립 라우트 `/custom-topic`을 신설하였으며, `/daily-diary`와 `/custom-topic` 지면 모두 `/journal` 지면의 2단계 입력 흐름(1단계: ⌨️ 키보드로 쓰기 | 🎙️ 음성으로 적기 | 🖼️ 사진으로 올리기 3개 큼직한 선택 카드 ➔ 2단계: 전용 입력 폼)을 100% 동일하게 따르도록 개편하여 통합 UI/UX 완벽성을 확보하기 위함.
+
+## Outcome
+
+* **전용 독립 추억 주제 라우트 구축 (`app/custom-topic/page.tsx`)**:
+  - `CustomTopicModal` 팝업 모달 완전 삭제 ➔ `/custom-topic` 개별 정적 라우트 신설.
+  - `/journal`과 동일한 2단계 입력 수단 선택기 흐름 적용.
+* **`/daily-diary` 2단계 입력 수단 선택기 개편 (`app/daily-diary/page.tsx`)**:
+  - 1단계: 3개 수단 선택 카드 (키보드 / 음성 / 사진) ➔ 2단계: 선택 수단별 전용 입력 폼 구조 완벽 통일.
+* **홈 메인 라우팅 반영 (`app/home/page.tsx`)**:
+  - "어르신께 대화 주제 제안하기 / 직접 추억 주제 만들기" 클릭 시 `/custom-topic` 페이지로 이동.
+* **Git 원격 반영**: `6ee347d` 커밋으로 원격 저장소 푸시 완료.
+
+## Files
+
+* [app/custom-topic/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/custom-topic/page.tsx) (신설)
+* [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (수정)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [components/CustomTopicModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/CustomTopicModal.tsx) (삭제)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+
 
 
 

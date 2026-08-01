@@ -403,8 +403,8 @@ function JournalContent() {
                     <button
                       onClick={isRecording ? stopRecording : startRecording}
                       className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-sm ${isRecording
-                          ? "bg-red-800 hover:bg-red-900 text-white animate-pulse"
-                          : "bg-primary text-primary-foreground"
+                        ? "bg-red-800 hover:bg-red-900 text-white animate-pulse"
+                        : "bg-primary text-primary-foreground"
                         }`}
                     >
                       <Mic size={28} />
@@ -563,29 +563,21 @@ function JournalContent() {
           </div>
         )}
 
-        {/* Action button */}
-        <div className="w-full mt-4">
-          {!answerType ? (
-            <Button
-              variant="secondary"
-              disabled
-              className="w-full opacity-60 cursor-not-allowed"
-            >
-              위에서 기록 방식을 선택해 주세요
-            </Button>
-          ) : (
+        {/* Action Button */}
+        {answerType && (
+          <div className="w-full mt-4">
             <Button
               variant="primary"
               onClick={handleSubmitAnswer}
               disabled={answerType === "ocr" && ocrConfirmStep !== "confirmed"}
-              className="w-full"
+              className="w-full py-3.5 text-base"
             >
               {answerType === "ocr" && ocrConfirmStep !== "confirmed"
                 ? "사진 번역 정정을 완료해 주세요"
-                : "장적에 추억 보관"}
+                : "장적에 추억 보관 ✦"}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );

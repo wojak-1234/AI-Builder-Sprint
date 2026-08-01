@@ -230,14 +230,22 @@ function HomeContent() {
         {(() => {
           const todayStr = new Date().toISOString().substring(0, 10);
 
-          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question
+          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question OR an answer was created today
           const isMission1Done =
             !todayQuestion ||
             todayQuestion.status === "answered" ||
-            answers.some((a) => a.question_id === todayQuestion.id);
+            answers.some(
+              (a) =>
+                (todayQuestion && a.question_id === todayQuestion.id) ||
+                (a.created_at && a.created_at.startsWith(todayStr))
+            );
 
           // Mission 2 Done: a daily diary entry exists for today
-          const isMission2Done = recentDiaries.some((d) => d.event_date === todayStr || d.created_at.startsWith(todayStr));
+          const isMission2Done = recentDiaries.some(
+            (d) =>
+              d.event_date === todayStr ||
+              (d.created_at && d.created_at.startsWith(todayStr))
+          );
 
           const allMissionsDone = isMission1Done && isMission2Done;
 
