@@ -10,7 +10,7 @@ import DayDetailModal from "@/components/DayDetailModal";
 import CustomTopicModal from "@/components/CustomTopicModal";
 import { supabaseService, DBUser, DBQuestionHistory, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
-import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun } from "lucide-react";
+import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun, Check } from "lucide-react";
 
 function HomeContent() {
   const router = useRouter();
@@ -228,67 +228,99 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* 1. Today's Question Card - Soft Yellow Highlighted Mission 1 */}
-        {todayQuestion ? (
-          <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative transition-all duration-300 flex flex-col gap-4">
-            {/* Mission Tag badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
-              <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
-              📌 오늘의 미션 1: 회상 구절 적기
-            </div>
+        {/* Mission Completion Calculation */}
+        {(() => {
+          const todayStr = new Date().toISOString().substring(0, 10);
 
-            {/* Question Text */}
-            <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
-              &ldquo;{todayQuestion.question_text}&rdquo;
-            </h3>
+          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question
+          const isMission1Done =
+            !todayQuestion ||
+            todayQuestion.status === "answered" ||
+            answers.some((a) => a.question_id === todayQuestion.id);
 
-            {/* Primary Action Button */}
-            <button
-              onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
-              className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
-            >
-              기록하기 ✦
-            </button>
-          </div>
-        ) : (
-          <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 text-center">
-            <p className="text-amber-900 dark:text-amber-200 font-serif text-sm">오늘 하루의 회상 질문이 준비되어 있습니다.</p>
-          </div>
-        )}
+          // Mission 2 Done: a daily diary entry exists for today
+          const isMission2Done = recentDiaries.some((d) => d.event_date === todayStr || d.created_at.startsWith(todayStr));
 
-        {/* 2. Daily Diary Container Card - Soft Yellow Highlighted Mission 2 */}
-        <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
-              <Sun size={13} className="text-amber-600 dark:text-amber-400" />
-              📌 오늘의 미션 2: 일상 일기 적기
-            </div>
-            {recentDiaries.length > 0 && (
-              <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
-                보관된 일기 {recentDiaries.length}건
-              </span>
-            )}
-          </div>
+          const allMissionsDone = isMission1Done && isMission2Done;
 
-          <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
-            오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
-          </h4>
+          if (allMissionsDone) {
+            return (
+              <div className="w-full p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-center flex flex-col items-center gap-2 shadow-xs animate-in fade-in duration-300">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Check size={20} className="stroke-[3]" />
+                </div>
+                <h3 className="text-base font-serif font-bold">오늘의 모든 회상 미션을 멋지게 완수하셨습니다!</h3>
+                <p className="text-xs font-sans text-emerald-700/80 dark:text-emerald-400/80">
+                  어르신의 소중한 추억과 일상이 이음 서첩에 고이 보관되었습니다.
+                </p>
+              </div>
+            );
+          }
 
-          {/* Show recent diary preview if exists */}
-          {recentDiaries.length > 0 && (
-            <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
-              &ldquo;{recentDiaries[0].content}&rdquo;
-            </div>
-          )}
+          return (
+            <>
+              {/* 1. Today's Question Card - Mission 1 (Hides when done) */}
+              {!isMission1Done && todayQuestion && (
+                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative transition-all duration-300 flex flex-col gap-4">
+                  {/* Mission Tag badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
+                    <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
+                    📌 오늘의 미션 1: 회상 구절 적기
+                  </div>
 
-          <button
-            onClick={() => router.push("/daily-diary")}
-            className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
-          >
-            <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
-            오늘 일상 일기 적기 ✦
-          </button>
-        </div>
+                  {/* Question Text */}
+                  <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
+                    &ldquo;{todayQuestion.question_text}&rdquo;
+                  </h3>
+
+                  {/* Primary Action Button */}
+                  <button
+                    onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
+                    className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
+                  >
+                    기록하기 ✦
+                  </button>
+                </div>
+              )}
+
+              {/* 2. Daily Diary Container Card - Mission 2 (Hides when done) */}
+              {!isMission2Done && (
+                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
+                      <Sun size={13} className="text-amber-600 dark:text-amber-400" />
+                      📌 오늘의 미션 2: 일상 일기 적기
+                    </div>
+                    {recentDiaries.length > 0 && (
+                      <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
+                        보관된 일기 {recentDiaries.length}건
+                      </span>
+                    )}
+                  </div>
+
+                  <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
+                    오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
+                  </h4>
+
+                  {/* Show recent diary preview if exists */}
+                  {recentDiaries.length > 0 && (
+                    <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
+                      &ldquo;{recentDiaries[0].content}&rdquo;
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => router.push("/daily-diary")}
+                    className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                  >
+                    <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
+                    오늘 일상 일기 적기 ✦
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* 3. Calendar Widget Section */}
         <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />

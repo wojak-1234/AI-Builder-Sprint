@@ -471,6 +471,43 @@ Planner, Coder, Architect
 * [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+홈 화면 미션 한눈에 보기 개편: 인사말 헤더 콤팩트화, 연노랑(Soft Yellow) 미션 하이라이트 배색 및 사족 설명문 삭제.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+접속 시 스크롤 없이도 **오늘의 두 가지 미션(회상 구절 적기 & 일상 일기 적기)**이 한눈에 들어오도록 상단 부피를 줄이고, 사족 설명 텍스트를 정리하여 연노랑 하이라이트 카드로 가독성을 극대화하기 위함.
+
+## Outcome
+
+* **인사말 헤더 콤팩트화**: `py-8` 수직 부피를 60% 축소하여 접속 직후 두 미션 카드가 한눈에 보임.
+* **오늘의 미션 연노랑(Soft Yellow) Highlight 배색**:
+  - `📌 오늘의 미션 1: 회상 구절 적기` (`bg-amber-100/80 border-amber-300`)
+  - `📌 오늘의 미션 2: 일상 일기 적기` (`bg-amber-100/80 border-amber-300`)
+* **불필요한 부연 설명문 완전 삭제**: 화면 가독성 및 직관성 향상.
+* **Git 원격 반영**: `923e8f6` 커밋으로 원격 저장소 푸시 완료.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+
 
 
 
