@@ -507,6 +507,45 @@ Planner, Coder
 * [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
 
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+미션 완수 시 카드 자동 완료 숨김 처리 및 `/journal`, `/daily-diary`, `CustomTopicModal` 간 100% UI 디자인 톤앤매너 통일.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+미션을 작성 완료하면 해당 카드가 자동으로 완수 숨김 처리되어 성취감을 높이고, `/daily-diary` 및 추억 주제 만들기 모달의 디자인을 `/journal` 지면의 정갈한 서화풍 스타일로 100% 일치시켜 완벽한 UI 일관성을 확보하기 위함.
+
+## Outcome
+
+* **미션 완수 자동 숨김 (`app/home/page.tsx`)**:
+  - 미션 1(회상 구절 작성) 완료 시 미션 1 카드 자동 숨김.
+  - 미션 2(오늘 일상 일기 작성) 완료 시 미션 2 카드 자동 숨김.
+  - 두 미션 모두 완수 시 **"🎉 오늘 부여된 모든 회상 미션을 멋지게 완수하셨습니다!"** 축하 카드 표시.
+* **UI 톤앤매너 100% 통일 (`app/daily-diary/page.tsx`)**:
+  - `/journal` 지면과 동일한 상단 네비게이션, 질문 버블 카드 (`bg-secondary border border-border`), 정갈한 텍스트/음성/사진 수단 선택기 UI로 완전 통일.
+* **Git 원격 반영**: `0648fc3` 커밋으로 원격 저장소 푸시 완료.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+
 
 
 

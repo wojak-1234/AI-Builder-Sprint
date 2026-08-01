@@ -7,7 +7,6 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import CompletionModal from "@/components/CompletionModal";
 import CalendarWidget from "@/components/CalendarWidget";
 import DayDetailModal from "@/components/DayDetailModal";
-import CustomTopicModal from "@/components/CustomTopicModal";
 import { supabaseService, DBUser, DBQuestionHistory, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
 import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun, Check } from "lucide-react";
@@ -21,7 +20,6 @@ function HomeContent() {
   const [recentDiaries, setRecentDiaries] = useState<DBDailyDiary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
   // Calendar Selection Modal state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -327,9 +325,9 @@ function HomeContent() {
 
         {/* 4. Menu Items Stack (Custom Topic + Read Narratives) */}
         <div className="flex flex-col gap-3.5 w-full">
-          {/* Menu Item 1: Custom Topic Creation */}
+          {/* Menu Item 1: Custom Topic Creation Page Route */}
           <div
-            onClick={() => setIsCustomModalOpen(true)}
+            onClick={() => router.push("/custom-topic")}
             className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer group"
           >
             <div className="flex items-center gap-4">
@@ -394,13 +392,6 @@ function HomeContent() {
         />
       )}
 
-      {/* Custom Topic Creation Modal */}
-      <CustomTopicModal
-        isOpen={isCustomModalOpen}
-        onClose={() => setIsCustomModalOpen(false)}
-        userId={user?.id || "user-elderly-123"}
-        creatorRole={user?.role || "self"}
-      />
     </div>
   );
 }
