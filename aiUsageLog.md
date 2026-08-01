@@ -627,6 +627,43 @@ Planner, Architect, Coder
 * [components/KnowledgeGraph.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/KnowledgeGraph.tsx) (삭제)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
 
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+상단 유저 버튼(역할 전환 버튼) 클릭 시 본인 모드(`self`)와 보호자 모드(`guardian`) 간 역할 스위칭이 100% 동기화되어 즉각 변경되도록 수정.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+`getCurrentUser()` 및 `setCurrentUser()`의 세션 저장소 보존 로직을 강화하여 상단 아이콘 버튼 클릭 시 즉시 어르신 모드(`김순자 어르신`) ↔ 보호자 모드(`이지영 자녀`) 간 화면 및 기능이 즉각적으로 전환되도록 보장하기 위함.
+
+## Outcome
+
+* **역할 스위칭 영구 보존 (`services/supabase-service.ts`)**:
+  - `getCurrentUser()`가 로컬/인메모리 세션 스토어를 1순위로 참조하여 스위칭된 역할 정보를 유지하도록 수정.
+* **유저 버튼 클릭 핸들러 동기화 (`app/home/page.tsx`)**:
+  - `handleRoleToggle` 실행 시 `user.role`을 `"self"` ↔ `"guardian"`으로 즉각 스위칭하고 화면 동기화.
+* **Git 원격 반영**: `d3efdd4` 커밋으로 원격 저장소 푸시 완료.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+
 
 
 

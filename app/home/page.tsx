@@ -227,34 +227,16 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* Mission Completion Calculation & Role-based UI rendering */}
+        {/* Role-based UI rendering */}
         {(() => {
           const isGuardian = user?.role === "guardian";
-          const todayStr = new Date().toISOString().substring(0, 10);
 
-          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question
-          const isMission1Done =
-            !todayQuestion ||
-            todayQuestion.status === "answered" ||
-            answers.some(
-              (a) =>
-                (todayQuestion && a.question_id === todayQuestion.id) ||
-                (a.created_at && a.created_at.startsWith(todayStr))
-            );
-
-          // Mission 2 Done: a daily diary entry exists for today
-          const isMission2Done = recentDiaries.some(
-            (d) =>
-              d.event_date === todayStr ||
-              (d.created_at && d.created_at.startsWith(todayStr))
-          );
-
-          // If Guardian: only show shared question if exists, and custom topic + 11-category viewer
+          // If Guardian: show shared question if exists, and custom topic proposal + 11-category viewer
           if (isGuardian) {
             return (
               <div className="flex flex-col gap-5 w-full">
-                {/* Shared Question for Guardian if exists and shared */}
-                {todayQuestion && todayQuestion.shared && !isMission1Done && (
+                {/* Shared Question for Guardian if exists */}
+                {todayQuestion && todayQuestion.shared && (
                   <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left flex flex-col gap-4">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40">
                       <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
@@ -322,30 +304,11 @@ function HomeContent() {
             );
           }
 
-          // Elderly Mode (self): Show Mission 1 & Mission 2 Cards only (No narrative link for elderly UI simplicity)
-          const allMissionsDone = isMission1Done && isMission2Done;
-
-          if (allMissionsDone) {
-            return (
-              <div className="flex flex-col gap-5 w-full">
-                <div className="w-full p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-center flex flex-col items-center gap-2 shadow-xs animate-in fade-in">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <Check size={20} className="stroke-[3]" />
-                  </div>
-                  <h3 className="text-base font-serif font-bold">오늘의 모든 회상 미션을 멋지게 완수하셨습니다!</h3>
-                  <p className="text-xs font-sans text-emerald-700/80 dark:text-emerald-400/80">
-                    어르신의 소중한 추억과 일상이 이음 서첩에 고이 보관되었습니다.
-                  </p>
-                </div>
-                <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
-              </div>
-            );
-          }
-
+          // Elderly Mode (self): Always show Mission 1 & Mission 2 Cards
           return (
             <div className="flex flex-col gap-5 w-full">
               {/* 1. Today's Question Card - Mission 1 (Self mode) */}
-              {!isMission1Done && todayQuestion && (
+              {todayQuestion && (
                 <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
                     <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
@@ -366,39 +329,37 @@ function HomeContent() {
               )}
 
               {/* 2. Daily Diary Container Card - Mission 2 (Self mode) */}
-              {!isMission2Done && (
-                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
-                      <Sun size={13} className="text-amber-600 dark:text-amber-400" />
-                      📌 오늘의 미션 2: 일상 일기 적기
-                    </div>
-                    {recentDiaries.length > 0 && (
-                      <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
-                        보관된 일기 {recentDiaries.length}건
-                      </span>
-                    )}
+              <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
+                    <Sun size={13} className="text-amber-600 dark:text-amber-400" />
+                    📌 오늘의 미션 2: 일상 일기 적기
                   </div>
-
-                  <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
-                    오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
-                  </h4>
-
                   {recentDiaries.length > 0 && (
-                    <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
-                      &ldquo;{recentDiaries[0].content}&rdquo;
-                    </div>
+                    <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
+                      보관된 일기 {recentDiaries.length}건
+                    </span>
                   )}
-
-                  <button
-                    onClick={() => router.push("/daily-diary")}
-                    className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs"
-                  >
-                    <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
-                    오늘 일상 일기 적기 ✦
-                  </button>
                 </div>
-              )}
+
+                <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
+                  오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
+                </h4>
+
+                {recentDiaries.length > 0 && (
+                  <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
+                    &ldquo;{recentDiaries[0].content}&rdquo;
+                  </div>
+                )}
+
+                <button
+                  onClick={() => router.push("/daily-diary")}
+                  className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
+                  오늘 일상 일기 적기 ✦
+                </button>
+              </div>
 
               <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
             </div>
