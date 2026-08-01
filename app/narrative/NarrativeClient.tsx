@@ -1,266 +1,243 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { supabaseService, DBNarrative, DBUser } from "@/services/supabase-service";
-import {
-  ArrowLeft, BookOpen, Users, Calendar, HelpCircle,
-  Activity, PlusCircle, X
-} from "lucide-react";
-import { KnowledgeGraph } from "@/components/KnowledgeGraph";
+import { supabaseService, DBAnswer, DBDailyDiary, DBUser } from "@/services/supabase-service";
+import { ArrowLeft, BookOpen, Calendar, User, MessageSquare, Tag, Filter, CheckCircle2 } from "lucide-react";
 
 type NarrativeClientProps = {
   initialUser: DBUser | null;
-  initialNarratives: DBNarrative[];
+  initialNarratives: any[];
 };
+
+// 11 Category Definitions
+const CATEGORIES = [
+  { id: "all", label: "전체", icon: "✨" },
+  { id: "person", label: "인물", icon: "👤" },
+  { id: "place", label: "장소", icon: "📍" },
+  { id: "time", label: "시간", icon: "⏳" },
+  { id: "event", label: "사건", icon: "📜" },
+  { id: "food", label: "음식", icon: "🍱" },
+  { id: "sensory", label: "감각", icon: "🌸" },
+  { id: "animal", label: "동물", icon: "🐕" },
+  { id: "object", label: "사물", icon: "📦" },
+  { id: "emotion", label: "감정", icon: "💕" },
+  { id: "other", label: "기타", icon: "🌿" },
+] as const;
+
+type CategoryType = typeof CATEGORIES[number]["id"];
 
 export default function NarrativeClient({
   initialUser,
-  initialNarratives,
 }: NarrativeClientProps) {
   const router = useRouter();
 
   const [user, setUser] = useState<DBUser | null>(initialUser);
-  const [narratives, setNarratives] = useState<DBNarrative[]>(initialNarratives);
-  const [selectedNarrative, setSelectedNarrative] = useState<DBNarrative | null>(null);
-  const [simulating, setSimulating] = useState(false);
-  const [simulationStatus, setSimulationStatus] = useState("");
+  const [answers, setAnswers] = useState<DBAnswer[]>([]);
+  const [diaries, setDiaries] = useState<DBDailyDiary[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType>("all");
+  const [loading, setLoading] = useState(true);
 
-  // Load / re-load narratives (called on mount + on realtime event)
+  // Load answers and daily diaries for categorized card display
   const loadData = async () => {
     try {
+      setLoading(true);
       const curr = await supabaseService.getCurrentUser();
       setUser(curr);
+
       const elderlyId =
         curr?.role === "self" ? curr.id : curr?.paired_user_id || "user-elderly-123";
-      const list = await supabaseService.getNarratives(elderlyId);
-      const sorted = [...list].sort((a, b) => a.event_date.localeCompare(b.event_date));
-      setNarratives(sorted);
 
-      // Keep selection alive if the selected node still exists
-      setSelectedNarrative((prev) =>
-        prev ? sorted.find((n) => n.id === prev.id) ?? null : null
-      );
+      const [answerList, diaryList] = await Promise.all([
+        supabaseService.getAnswers(elderlyId),
+        supabaseService.getRecentDailyDiaries(elderlyId),
+      ]);
+
+      setAnswers(answerList);
+      setDiaries(diaryList);
     } catch (err) {
-      console.error(err);
+      console.error("Error loading categorized answer cards:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
-    if (typeof window !== "undefined") {
-      window.addEventListener("eeum_narratives_updated", loadData);
-      return () => window.removeEventListener("eeum_narratives_updated", loadData);
-    }
   }, []);
 
-  // Real-time collaboration simulator
-  const triggerSimulation = async () => {
-    if (simulating) return;
-    const alreadyExists = narratives.some((n) => n.title === "1982년 겨울의 눈사람");
-    if (alreadyExists) {
-      setSimulationStatus("이미 자녀 지영 님의 기억 노드가 연결되어 있습니다.");
-      setTimeout(() => setSimulationStatus(""), 3000);
-      return;
-    }
-
-    const elderlyId =
-      user?.role === "self" ? user.id : user?.paired_user_id || "user-elderly-123";
-
-    setSimulating(true);
-    setSimulationStatus("자녀 지영 님이 기억을 작성하고 있습니다...");
-    setTimeout(async () => {
-      setSimulationStatus("기억 전송 중 — 마인드맵 노드를 연결합니다.");
-      setTimeout(async () => {
-        try {
-          const added = await supabaseService.addMockGuardianNarrative(elderlyId);
-          setSelectedNarrative(added);
-        } catch (err) {
-          console.error(err);
-        } finally {
-          setSimulationStatus("");
-          setSimulating(false);
-        }
-      }, 1200);
-    }, 2000);
+  // Classify answer/diary items into 11 categories based on text keywords
+  const classifyItem = (text: string, questionText: string = ""): CategoryType => {
+    const combined = (text + " " + questionText).toLowerCase();
+    if (combined.includes("어머니") || combined.includes("아버지") || combined.includes("선생님") || combined.includes("친구") || combined.includes("지영")) return "person";
+    if (combined.includes("고향") || combined.includes("학교") || combined.includes("마을") || combined.includes("집") || combined.includes("동네")) return "place";
+    if (combined.includes("19") || combined.includes("년") || combined.includes("어릴") || combined.includes("여름") || combined.includes("겨울")) return "time";
+    if (combined.includes("입학") || combined.includes("결혼") || combined.includes("소풍") || combined.includes("운동회") || combined.includes("장날")) return "event";
+    if (combined.includes("찌개") || combined.includes("밥") || combined.includes("음식") || combined.includes("국") || combined.includes("사탕") || combined.includes("김밥")) return "food";
+    if (combined.includes("냄새") || combined.includes("소리") || combined.includes("햇살") || combined.includes("바람") || combined.includes("따뜻")) return "sensory";
+    if (combined.includes("바둑") || combined.includes("강아지") || combined.includes("고양이") || combined.includes("새")) return "animal";
+    if (combined.includes("편지") || combined.includes("사진") || combined.includes("가방") || combined.includes("자전거") || combined.includes("시계")) return "object";
+    if (combined.includes("기쁘") || combined.includes("그립") || combined.includes("슬프") || combined.includes("좋았") || combined.includes("행복")) return "emotion";
+    return "other";
   };
 
-  const alreadySimulated = narratives.some((n) => n.title === "1982년 겨울의 눈사람");
+  // Filtered Cards
+  const allCards = [
+    ...answers.map((a) => ({
+      id: a.id,
+      type: "answer" as const,
+      category: classifyItem(a.answer_text, a.question_text),
+      title: a.question_text,
+      content: a.answer_text,
+      photoUrl: undefined as string | undefined,
+      date: a.created_at.substring(0, 10),
+      byGuardian: a.by_guardian,
+    })),
+    ...diaries.map((d) => ({
+      id: d.id,
+      type: "diary" as const,
+      category: classifyItem(d.content),
+      title: "오늘의 일상 일기",
+      content: d.content,
+      photoUrl: d.photo_url as string | undefined,
+      date: d.event_date || d.created_at.substring(0, 10),
+      byGuardian: false,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const filteredCards = selectedCategory === "all"
+    ? allCards
+    : allCards.filter((c) => c.category === selectedCategory);
 
   return (
-    <div className="relative w-full h-dvh overflow-hidden bg-background text-foreground">
-
-      {/* ── Full-screen Mind Map Canvas ─────────────────────── */}
-      <div className="absolute inset-0">
-        <KnowledgeGraph
-          narratives={narratives}
-          selectedId={selectedNarrative?.id}
-          onSelectNarrative={setSelectedNarrative}
-        />
-      </div>
-
-      {/* ── Floating Glassmorphism Header ───────────────────── */}
-      <header className="fixed top-5 left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-4xl rounded-full px-5 py-2.5 flex items-center justify-between backdrop-blur-md bg-white/20 dark:bg-neutral-900/30 border border-white/20 dark:border-white/10 shadow-lg transition-all duration-300">
+    <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground px-6 py-10 relative transition-colors duration-300">
+      {/* Header */}
+      <header className="w-full max-w-2xl mx-auto flex items-center justify-between mb-8 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-foreground/70 hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={16} />
           서랍으로
         </button>
-
-        <div className="flex items-center gap-2.5">
-          {/* Color legend */}
-          <div className="hidden sm:flex items-center gap-3 text-[10px] font-serif text-foreground/60 mr-2">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#4E6F96] inline-block" />어르신
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#7C9A74] inline-block" />자녀
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#60998B] inline-block" />공동
-            </span>
-          </div>
-
+        <div className="flex items-center gap-4">
           <ThemeSwitcher />
-
-          {/* Simulator trigger */}
-          {simulating ? (
-            <div className="flex items-center gap-1.5 text-[11px] font-serif text-primary animate-pulse px-3 py-1.5">
-              <Activity size={12} className="animate-spin" />
-              <span className="hidden sm:inline">{simulationStatus}</span>
-            </div>
-          ) : (
-            <button
-              onClick={triggerSimulation}
-              disabled={alreadySimulated}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/15 border border-primary/25 text-primary hover:bg-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 text-[11px] font-serif font-bold cursor-pointer whitespace-nowrap"
-            >
-              <PlusCircle size={12} />
-              <span className="hidden sm:inline">자녀 기억 실시간 추가</span>
-              <span className="sm:hidden">+</span>
-            </button>
-          )}
+          <span className="text-zinc-500 font-serif text-xs block select-none">
+            11-카테고리 추억 보관함
+          </span>
         </div>
       </header>
 
-      {/* ── Right-side Detail Panel (slide-in) ──────────────── */}
-      <aside
-        className={`fixed top-0 right-0 h-full w-full sm:w-[420px] z-20 flex flex-col bg-background/95 backdrop-blur-lg border-l border-border shadow-2xl overflow-y-auto transition-transform duration-500 ease-out ${
-          selectedNarrative ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        {selectedNarrative && (
-          <>
-            {/* Panel Header */}
-            <div className="flex items-center justify-between px-6 pt-16 pb-4 border-b border-border shrink-0">
-              <div>
-                <span className="text-[10px] text-highlight font-serif font-bold tracking-wider block uppercase">
-                  보관 기록 제 {narratives.indexOf(selectedNarrative) + 1}장
-                </span>
-                <h2 className="text-xl font-serif font-bold text-foreground mt-1 leading-snug">
-                  {selectedNarrative.title}
-                </h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary text-primary text-[11px] font-serif font-bold border border-border">
-                  <Calendar size={10} />
-                  {selectedNarrative.event_date.substring(0, 4)}년경
-                </span>
+      {/* Main Container */}
+      <main className="w-full max-w-2xl mx-auto flex-1 flex flex-col gap-6">
+        {/* Title Section */}
+        <div className="text-left">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-serif font-bold mb-2">
+            <BookOpen size={13} />
+            추억 서화 보관함
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+            {user?.role === "guardian" ? "어르신의 11-카테고리 추억 카드 뷰어" : "어르신의 소중한 회상 기록 서첩"}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1 font-serif">
+            인물, 장소, 사건별 카테고리 태그로 정돈된 회상 답변 카드입니다.
+          </p>
+        </div>
+
+        {/* 11 Category Filter Chips */}
+        <div className="w-full overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex items-center gap-2 w-max">
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              const count = cat.id === "all"
+                ? allCards.length
+                : allCards.filter((c) => c.category === cat.id).length;
+
+              return (
                 <button
-                  onClick={() => setSelectedNarrative(null)}
-                  className="p-1.5 rounded-full hover:bg-secondary transition-colors cursor-pointer"
-                  aria-label="닫기"
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-serif font-bold border transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm scale-102"
+                      : "bg-secondary text-secondary-foreground border-border hover:bg-muted/50"
+                  }`}
                 >
-                  <X size={16} className="text-muted-foreground" />
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    isSelected ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                  }`}>
+                    {count}
+                  </span>
                 </button>
-              </div>
-            </div>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* Panel Content */}
-            <div className="flex flex-col gap-6 px-6 py-6">
-              {/* Narrative body */}
-              <p className="text-sm leading-loose text-muted-foreground whitespace-pre-line font-sans">
-                {selectedNarrative.content}
-              </p>
+        {/* Card Viewer List */}
+        {loading ? (
+          <div className="py-16 text-center text-muted-foreground font-serif text-sm">
+            추억 카드를 정성스레 펼치는 중입니다...
+          </div>
+        ) : filteredCards.length === 0 ? (
+          <div className="p-10 rounded-2xl bg-secondary/50 border border-border text-center flex flex-col items-center gap-2 my-6">
+            <Tag size={28} className="text-muted-foreground" />
+            <h3 className="text-base font-serif font-bold">해당 카테고리에 보관된 추억 카드가 없습니다.</h3>
+            <p className="text-xs text-muted-foreground font-serif">
+              어르신과 함께 소소한 일상이나 추억을 채워보세요.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 w-full">
+            {filteredCards.map((card) => {
+              const catDef = CATEGORIES.find((c) => c.id === card.category) || CATEGORIES[10];
 
-              {/* Merged family perspectives */}
-              {selectedNarrative.mergedAnswers && selectedNarrative.mergedAnswers.length > 0 && (
-                <div className="flex flex-col gap-4 border-t border-border pt-6">
-                  <h3 className="text-xs font-serif font-bold text-primary flex items-center gap-1.5">
-                    <Users size={13} />
-                    가족 간 기억 대조지면
+              return (
+                <div
+                  key={card.id}
+                  className="p-6 rounded-2xl bg-secondary/70 border border-border hover:border-primary/40 transition-all text-left flex flex-col gap-3 shadow-xs"
+                >
+                  {/* Card Header: Category & Date */}
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background border border-border text-xs font-serif font-bold text-foreground">
+                      <span>{catDef.icon}</span>
+                      <span>{catDef.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-serif text-muted-foreground">
+                      {card.byGuardian && (
+                        <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+                          보호자 기록
+                        </span>
+                      )}
+                      <span>{card.date}</span>
+                    </div>
+                  </div>
+
+                  {/* Question / Title */}
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-foreground leading-snug">
+                    &ldquo;{card.title}&rdquo;
                   </h3>
 
-                  {selectedNarrative.mergedAnswers.map((item, idx) => (
-                    <div key={idx} className="flex flex-col gap-3 p-4 rounded-xl bg-secondary/50 border border-border">
-                      {/* Question */}
-                      <div className="flex gap-2 text-[11px] text-muted-foreground font-serif leading-relaxed">
-                        <HelpCircle size={12} className="text-highlight shrink-0 mt-0.5" />
-                        <span className="font-bold">{item.question}</span>
-                      </div>
-
-                      {/* Cards */}
-                      <div className="flex flex-col gap-2">
-                        {item.userText && (
-                          <div className="p-3 rounded-lg bg-background border border-border">
-                            <span className="text-[9px] text-[#4E6F96] font-serif font-bold tracking-widest uppercase block mb-1">
-                              어르신의 기억
-                            </span>
-                            <p className="text-[12px] text-muted-foreground leading-loose font-sans">
-                              &ldquo;{item.userText}&rdquo;
-                            </p>
-                          </div>
-                        )}
-                        {item.guardianText && (
-                          <div className="p-3 rounded-lg bg-background border border-border">
-                            <span className="text-[9px] text-[#7C9A74] font-serif font-bold tracking-widest uppercase block mb-1">
-                              자녀의 기억
-                            </span>
-                            <p className="text-[12px] text-muted-foreground leading-loose font-sans">
-                              &ldquo;{item.guardianText}&rdquo;
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Differences */}
-                      {item.differences && item.differences.length > 0 && (
-                        <div className="border-t border-border pt-2 text-[11px] text-muted-foreground">
-                          <span className="font-serif font-bold block mb-1">기억 비교 사료</span>
-                          <ul className="list-disc list-inside flex flex-col gap-0.5 pl-1 font-sans">
-                            {item.differences.map((d, dIdx) => (
-                              <li key={dIdx}>{d}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                  {/* Photo if exists */}
+                  {card.photoUrl && (
+                    <div className="rounded-xl overflow-hidden max-h-56 border border-border my-1">
+                      <img src={card.photoUrl} alt="Diary attachment" className="w-full h-full object-cover" />
                     </div>
-                  ))}
+                  )}
+
+                  {/* Content */}
+                  <p className="text-sm font-serif text-foreground/90 leading-relaxed bg-background/60 p-4 rounded-xl border border-border/50 select-text whitespace-pre-wrap">
+                    {card.content}
+                  </p>
                 </div>
-              )}
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
-      </aside>
-
-      {/* Click-away backdrop for mobile */}
-      {selectedNarrative && (
-        <div
-          className="fixed inset-0 z-10 sm:hidden"
-          onClick={() => setSelectedNarrative(null)}
-        />
-      )}
-
-      {/* Simulation status toast (mobile fallback) */}
-      {simulationStatus && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-neutral-900/90 text-white text-[11px] font-serif shadow-lg animate-fade-in flex items-center gap-2">
-          <Activity size={11} className="animate-spin" />
-          {simulationStatus}
-        </div>
-      )}
+      </main>
     </div>
   );
 }

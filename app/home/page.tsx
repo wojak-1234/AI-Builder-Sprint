@@ -226,11 +226,12 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* Mission Completion Calculation */}
+        {/* Mission Completion Calculation & Role-based UI rendering */}
         {(() => {
+          const isGuardian = user?.role === "guardian";
           const todayStr = new Date().toISOString().substring(0, 10);
 
-          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question OR an answer was created today
+          // Mission 1 Done: todayQuestion status is answered OR an answer exists for today's question
           const isMission1Done =
             !todayQuestion ||
             todayQuestion.status === "answered" ||
@@ -247,49 +248,123 @@ function HomeContent() {
               (d.created_at && d.created_at.startsWith(todayStr))
           );
 
+          // If Guardian: only show shared question if exists, and custom topic + 11-category viewer
+          if (isGuardian) {
+            return (
+              <div className="flex flex-col gap-5 w-full">
+                {/* Shared Question for Guardian if exists and shared */}
+                {todayQuestion && todayQuestion.shared && !isMission1Done && (
+                  <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left flex flex-col gap-4">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40">
+                      <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
+                      📌 세대 연결 공통 회상 질문
+                    </div>
+                    <h3 className="text-lg font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
+                      &ldquo;{todayQuestion.question_text}&rdquo;
+                    </h3>
+                    <button
+                      onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
+                      className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      보호자 답변 기록하기 ✦
+                    </button>
+                  </div>
+                )}
+
+                {/* Guardian Menu Card 1: Custom Topic Proposal */}
+                <div
+                  onClick={() => router.push("/custom-topic")}
+                  className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform">
+                      <Sparkles size={20} />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                        어르신께 대화 주제 제안하기
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1 font-sans">
+                        옛 앨범 사진이나 이야기 힌트로 정겨운 질문 다듬기
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
+                    &rarr;
+                  </span>
+                </div>
+
+                {/* Guardian Menu Card 2: 11-Category Answer Card Viewer */}
+                <Link href="/narrative" className="w-full group">
+                  <div className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+                        <BookOpen size={20} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                          어르신의 11-카테고리 추억 카드 뷰어
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 font-sans">
+                          인물, 장소, 사건별로 정돈된 어르신의 추억 보관함
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
+                      &rarr;
+                    </span>
+                  </div>
+                </Link>
+
+                <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
+              </div>
+            );
+          }
+
+          // Elderly Mode (self): Show Mission 1 & Mission 2 Cards only (No narrative link for elderly UI simplicity)
           const allMissionsDone = isMission1Done && isMission2Done;
 
           if (allMissionsDone) {
             return (
-              <div className="w-full p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-center flex flex-col items-center gap-2 shadow-xs animate-in fade-in duration-300">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <Check size={20} className="stroke-[3]" />
+              <div className="flex flex-col gap-5 w-full">
+                <div className="w-full p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-center flex flex-col items-center gap-2 shadow-xs animate-in fade-in">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <Check size={20} className="stroke-[3]" />
+                  </div>
+                  <h3 className="text-base font-serif font-bold">오늘의 모든 회상 미션을 멋지게 완수하셨습니다!</h3>
+                  <p className="text-xs font-sans text-emerald-700/80 dark:text-emerald-400/80">
+                    어르신의 소중한 추억과 일상이 이음 서첩에 고이 보관되었습니다.
+                  </p>
                 </div>
-                <h3 className="text-base font-serif font-bold">오늘의 모든 회상 미션을 멋지게 완수하셨습니다!</h3>
-                <p className="text-xs font-sans text-emerald-700/80 dark:text-emerald-400/80">
-                  어르신의 소중한 추억과 일상이 이음 서첩에 고이 보관되었습니다.
-                </p>
+                <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
               </div>
             );
           }
 
           return (
-            <>
-              {/* 1. Today's Question Card - Mission 1 (Hides when done) */}
+            <div className="flex flex-col gap-5 w-full">
+              {/* 1. Today's Question Card - Mission 1 (Self mode) */}
               {!isMission1Done && todayQuestion && (
-                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative transition-all duration-300 flex flex-col gap-4">
-                  {/* Mission Tag badge */}
+                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
                     <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
                     📌 오늘의 미션 1: 회상 구절 적기
                   </div>
 
-                  {/* Question Text */}
                   <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
                     &ldquo;{todayQuestion.question_text}&rdquo;
                   </h3>
 
-                  {/* Primary Action Button */}
                   <button
                     onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
-                    className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
+                    className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     기록하기 ✦
                   </button>
                 </div>
               )}
 
-              {/* 2. Daily Diary Container Card - Mission 2 (Hides when done) */}
+              {/* 2. Daily Diary Container Card - Mission 2 (Self mode) */}
               {!isMission2Done && (
                 <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
                   <div className="flex items-center justify-between">
@@ -308,7 +383,6 @@ function HomeContent() {
                     오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
                   </h4>
 
-                  {/* Show recent diary preview if exists */}
                   {recentDiaries.length > 0 && (
                     <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
                       &ldquo;{recentDiaries[0].content}&rdquo;
@@ -317,67 +391,18 @@ function HomeContent() {
 
                   <button
                     onClick={() => router.push("/daily-diary")}
-                    className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                    className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs"
                   >
                     <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
                     오늘 일상 일기 적기 ✦
                   </button>
                 </div>
               )}
-            </>
+
+              <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
+            </div>
           );
         })()}
-
-        {/* 3. Calendar Widget Section */}
-        <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
-
-        {/* 4. Menu Items Stack (Custom Topic + Read Narratives) */}
-        <div className="flex flex-col gap-3.5 w-full">
-          {/* Menu Item 1: Custom Topic Creation Page Route */}
-          <div
-            onClick={() => router.push("/custom-topic")}
-            className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform duration-300">
-                <Sparkles size={20} />
-              </div>
-              <div className="text-left">
-                <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
-                  {user?.role === "guardian" ? "어르신께 대화 주제 제안하기" : "직접 추억 주제 만들기"}
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1 font-sans">
-                  사진이나 텍스트 힌트로 맞춤 회상 질문 다듬기
-                </p>
-              </div>
-            </div>
-            <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
-              &rarr;
-            </span>
-          </div>
-
-          {/* Menu Item 2: Read Narratives */}
-          <Link href="/narrative" className="w-full group">
-            <div className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
-                  <BookOpen size={20} />
-                </div>
-                <div className="text-left">
-                  <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
-                    인생 나이테 연대기 보기
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1 font-sans">
-                    지면에 보관된 유년 시절의 회상 서사집
-                  </p>
-                </div>
-              </div>
-              <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
-                &rarr;
-              </span>
-            </div>
-          </Link>
-        </div>
       </main>
 
       <footer className="w-full max-w-lg mx-auto text-center mt-12 pb-4">
