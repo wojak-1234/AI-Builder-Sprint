@@ -586,6 +586,48 @@ Planner, Coder, Architect
 * [components/CustomTopicModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/CustomTopicModal.tsx) (삭제)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
 
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+마인드맵 UI 중단, 양자화 벡터 연관도 엔진 보존, 보호자/어르신 역할별 메인 홈 UI 분기 및 11-카테고리 답변 카드 뷰어 개발.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+복잡한 D3/SVG 마인드맵 그래프 UI를 완전 폐지하고 양자화 벡터 공간 거리 연관도 계산엔진(`mindmap-analyzer.ts`)은 질문 발송/카테고리화 용도로 보존하며, 어르신 UI는 미션 중심 간결화를, 보호자 UI에는 11-카테고리 답변 카드 뷰어를 제공하기 위함.
+
+## Outcome
+
+* **마인드맵 UI 완전 폐지 & Vector Distance Engine 보존**:
+  - D3 그래프/KnowledgeGraph 컴포넌트 삭제 및 노드 크기 UI 처리 완전 중단.
+  - `mindmap-analyzer.ts` 내 Quantization & Vector Space 거리 연관도 계산 알고리즘 100% 보존.
+* **어르신 vs 보호자 홈 UI 분기 (`app/home/page.tsx`)**:
+  - **어르신 UI (`user.role === "self"`)**: "인생 나이테 연대기 보기" 카드를 제거하고 오직 **오늘의 2가지 미션(회상 구절 & 일상 일기)**만 표시.
+  - **보호자 UI (`user.role === "guardian"`)**: 세대 연결 공통 질문(있는 경우) + **"어르신께 대화 주제 제안하기 (`/custom-topic`)"** + **"11-카테고리 추억 카드 뷰어 (`/narrative`)"** 전용 구성.
+* **보호자용 11-카테고리 답변 카드 뷰어 (`/narrative`)**:
+  - 11개 카테고리 칩(`인물`, `장소`, `시간`, `사건`, `음식`, `감각`, `동물`, `사물`, `감정` 등) 기반 정갈한 서화 카드 뷰어 신설.
+* **Git 원격 반영**: `d9c5733` 커밋으로 원격 저장소 푸시 완료.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [components/KnowledgeGraph.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/KnowledgeGraph.tsx) (삭제)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+
 
 
 

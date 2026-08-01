@@ -128,16 +128,17 @@ function HomeContent() {
   const currentStreak = calculateStreak(answers);
 
   const handleRoleToggle = async () => {
-    if (!user) return;
-    const newRole = user.role === "self" ? "guardian" : "self";
+    const currentRole = user?.role || "self";
+    const newRole = currentRole === "self" ? "guardian" : "self";
     const newUser: DBUser = {
       id: newRole === "self" ? "user-elderly-123" : "user-guardian-456",
       role: newRole,
       name: newRole === "self" ? "김순자 어르신" : "이지영 (자녀)",
       paired_user_id: newRole === "self" ? "user-guardian-456" : "user-elderly-123",
-      created_at: user.created_at
+      created_at: user?.created_at || new Date().toISOString()
     };
     await supabaseService.setCurrentUser(newUser);
+    setUser(newUser);
     window.location.reload();
   };
 

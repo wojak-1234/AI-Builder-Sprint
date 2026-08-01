@@ -279,31 +279,43 @@ if (isMockMode()) {
 // Database Service Interface
 export const supabaseService = {
   getCurrentUser: async (): Promise<DBUser | null> => {
-    if (isMockMode()) {
-      return getLocalStorageItem<DBUser | null>(MOCK_KEYS.CURRENT_USER, null);
+    // 1. Check local/in-memory store first for role toggle persistence
+    const storedUser = getLocalStorageItem<DBUser | null>(MOCK_KEYS.CURRENT_USER, null);
+    if (storedUser) return storedUser;
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        const { data: { user } } = await client.auth.getUser();
+        if (user) {
+          const { data } = await client.from("users").select("*").eq("id", user.id).single();
+          if (data) return data as DBUser;
+        }
+      } catch (err) {
+        console.warn("Supabase auth getUser fallback:", err);
+      }
     }
-    const client = getSupabaseClient()!;
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return null;
-    const { data } = await client.from("users").select("*").eq("id", user.id).single();
-    return data as DBUser;
+    return null;
   },
 
   setCurrentUser: async (user: DBUser): Promise<void> => {
-    if (isMockMode()) {
-      setLocalStorageItem(MOCK_KEYS.CURRENT_USER, user);
-      const users = getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
-      if (!users.some((u) => u.id === user.id)) {
-        users.push(user);
-        setLocalStorageItem(MOCK_KEYS.USERS, users);
-      }
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("eeum_user_changed"));
-      }
-      return;
+    // Always persist to LocalStorage/In-Memory store for fast role toggle
+    setLocalStorageItem(MOCK_KEYS.CURRENT_USER, user);
+    const users = getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
+    if (!users.some((u) => u.id === user.id)) {
+      users.push(user);
+      setLocalStorageItem(MOCK_KEYS.USERS, users);
     }
-    const client = getSupabaseClient()!;
-    await client.from("users").upsert(user);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        await client.from("users").upsert(user);
+      } catch (err) {
+        console.warn("Supabase setCurrentUser fallback warning:", err);
+      }
+    }
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("eeum_user_changed"));
     }
