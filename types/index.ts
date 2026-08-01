@@ -1,5 +1,10 @@
 export type EntityCategory = "person" | "location" | "date" | "event";
 
+export type MemoryZone =
+  | "sharedIndependentMemory" // 핵심 공통 독립기억 (양쪽 직접경험)
+  | "inheritedStory"          // 전해들은 이야기 (자녀 유아기)
+  | "soloPatientOnly";        // 부모 단독 인생 (자녀 출생 전)
+
 export type Entity = {
   name: string;
   category: EntityCategory;
@@ -20,6 +25,7 @@ export type Question = {
   type: QuestionType;
   targetEntity?: string;
   shared: boolean;
+  memoryZone?: MemoryZone;
 };
 
 export type DBUser = {
@@ -42,6 +48,7 @@ export type DBAnswer = {
   event_date: string; // ISO string or YYYY-MM-DD
   is_private: boolean;
   by_guardian: boolean;
+  memory_zone?: MemoryZone;
 };
 
 export type DBNarrative = {
@@ -53,6 +60,7 @@ export type DBNarrative = {
   event_date: string;
   created_at: string;
   mergedAnswers?: MergedPerspective[];
+  chapterTag?: "shared" | "inherited" | "solo_hidden_gem";
 };
 
 export type MergedPerspective = {
@@ -60,10 +68,27 @@ export type MergedPerspective = {
   userText?: string;
   guardianText?: string;
   differences?: string[];
+  memoryZone?: MemoryZone;
 };
 
-export type SafetyGuardResult = {
-  passed: boolean;
-  reason?: string;
-  fallbackOutput?: string;
+export type DBDailyDiary = {
+  id: string;
+  user_id: string;
+  content: string;
+  photo_url?: string;
+  created_at: string;
+  event_date: string;
+};
+
+export type DBQuestionHistory = {
+  id: string;
+  user_id: string;
+  question_text: string;
+  created_at: string;
+  status: "pending" | "answered";
+  shared: boolean;
+  memory_zone?: MemoryZone;
+  created_by?: "self" | "guardian";
+  custom_image_url?: string;
+  question_kind?: "personal_reminiscence" | "recent_diary_recall";
 };

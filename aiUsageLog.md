@@ -64,7 +64,7 @@ Planner, Architect, Coder, Researcher
 
 ## Task
 
-PWA 서비스 워커 및 HMR(핫 모듈 리로딩) 간섭으로 인한 개발 서버 프리징 및 무한 로딩 트러블슈팅, 루트(`/`) 경로의 랜딩 페이지 UI 개편.
+PWA 서비스 워커 및 HMR(핫 모듈 리로딩) 간섭으로 인한 개발 서버 프리징 및 무한 로딩 트러버슈팅, 루트(`/`) 경로의 랜딩 페이지 UI 개편.
 
 ## AI Tool
 
@@ -98,11 +98,11 @@ Coder, Researcher
 
 ## Date
 
-2026-07-31
+2026-08-01
 
 ## Task
 
-이음 (EEUM) 모바일 앱 전체 화면의 매트한 에디토리얼 스타일(Matte Editorial-Style) 디자인 개편.
+이음 가입성/접근성 개선 및 진입 구조 고도화 (로그인/회원가입 통합, 다크 모드 톤 보정 및 인라인 에러 구현).
 
 ## AI Tool
 
@@ -110,46 +110,52 @@ Antigravity
 
 ## Agent
 
-Architect, Coder
+Planner, Coder
 
 ## Purpose
 
-단순 기술적 느낌의 UI/UX(유리질감, 네온, 그라데이션)를 배제하고, 인쇄된 장적 서책, 전통 한옥 서실, 미술관 박물첩 느낌의 차분하고 고요한 동양적 여백과 종이 질감의 에디토리얼 테마로 전체 프론트엔드 스타일 및 레이아웃을 개편하기 위함.
+다크 모드의 어둡고 칙칙한 색상을 따뜻한 한옥 서재실 감성으로 개선하여 노년층 정서 안정을 도모하고, 가입 단계의 복잡하고 긴 텍스트를 줄이며, 팝업 경고 대신 항목 우측 인라인 에러를 제공하여 가입 가독성을 극대화함. 또한 시작하기 클릭 시 로그인과 가입을 선택할 수 있는 통합 페이지(`/register`)로 기존 구조를 통합함.
 
 ## Outcome
 
-* 바탕체/궁서체 감성의 한국어 명조 서체인 `Noto_Serif_KR` 폰트 패밀리를 추가하여 헤더, 질문, 타이틀 영역에 통합 적용.
-* 컬러 세팅 조정: Primary Background `#FAF8F5` (한지 감성 크림 페이퍼), Secondary Surface `#EFFCE6` (연둣빛 서화 전주지), Text `#1C1C1E` (차분한 먹색) 연계.
-* 나이테 시각화 요소를 화려한 네온 스타일에서 정갈한 만년필/연필 수묵 선형 드로잉(pen-line) 형태로 재디자인.
-* 각 서화 화면(Landing, Role Selection, Home, Journal Stack, Complete, Narrative Timeline)의 카드를 평평한 매트 종이 카드 디자인으로 일괄 개편 및 Next.js 16 빌드 성공 검증 완료.
+* **다크 모드 배색 개선**: 따뜻한 차콜 브라운(`#1D1C1A`), 우유빛 한지 텍스트(`#F4EFE6`), 놋쇠빛 골드(`#D8B48F`)로globals.css 다크모드 변수 재매핑 완료.
+* **인라인 에러 지원**: Input 컴포넌트에 `errorMessage` 속성 추가 및 라벨 우측 정렬 렌더링 적용.
+* **통합 진입 구축 및 데모 우회**: 기존 `/role-selection`을 삭제하고 `/register`로 가입/로그인을 통합 구축했으나, 개발 테스트 편의를 극대화하기 위해 대문 페이지의 "시작하기" 클릭 시 체험용 Mock 계정 세션을 즉시 주입하고 실제 사용 대시보드인 `/home`으로 다이렉트 우회 리다이렉트되도록 추가 적용함.
+* **텍스트 다이어트**: 가입 단계별 안내 문구의 길이를 간명하게 약 50% 축소 완료.
+* **테마별 로고 연동 및 크기 최적화**: `public/logo/` 내 투명 처리된 새 로고(`lightmodenew.jpg` 및 `darkmodenew.jpg`)에 대해 원형 마스크 및 배경색을 걷어내고 순수 이미지 형태로 렌더링되게 수정함. 또한, 랜딩 바 및 홈 헤더 영역에서 네비게이션 바 높이를 초과하지 않도록 높이를 `h-10` (40px) 및 `object-contain` 스타일로 고정하여 크기 조정을 완료.
+* **anime.js v4.5.0 애니메이션 엔진 연동**: 패키지 설치 후 Next.js SSR과 호환되는 `useAnime` 커스텀 훅 및 어르신 친화적 감속 이징(Cubic)과 미세 이동(Y Offset 12px)을 준수하는 `QuietFadeIn` 모션 래퍼 컴포넌트 신설. 메인 화면 히어로 영역에 시범 적용 완료.
+* **Shared Mind Map (Knowledge Graph) UI 구현**:
+  * 나이테 연대기 뷰와 토글 가능한 마인드맵 뷰를 탑재한 [NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) 구축.
+  * 외부 라이브러리 없이 순수 물리 계산 척력 모델을 적용하여 노드를 배치하고 `anime.js`를 사용해 크기와 경로를 마운트하는 [KnowledgeGraph.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/KnowledgeGraph.tsx) 구현.
+  * 소유권(어르신/보호자/공동)에 따른 노드 컬러 구분 및 마우스 호버 툴팁 장착.
+  * "실시간 자녀 기억 추가" 시뮬레이터와 `eeum_narratives_updated` 이벤트를 연동하여 실시간 기억망 성장 연출 구현.
+  * [app/narrative/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/page.tsx)를 Next.js App Router Server Component로 전환하여 서버 단 데이터 프리페칭 모델 구축.
+* **빌드 검증**: `npm run build` 프로덕션 빌드 무오류 통과 검증 완료.
 
 ## Files
 
-* [app/layout.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/layout.tsx)
 * [app/globals.css](file:///c:/Users/PC/Desktop/Projects/EEUM/app/globals.css)
-* [components/Button.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/Button.tsx)
 * [components/Input.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/Input.tsx)
 * [app/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/page.tsx)
-* [app/role-selection/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/role-selection/page.tsx)
+* [app/register/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/register/page.tsx)
 * [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx)
-* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx)
-* [app/journal/complete/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/complete/page.tsx)
-* [app/narrative/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/page.tsx)
-
-## Notes
-
-* 폰트 로드 시, Noto Sans KR 폰트의 부적절한 550 가중치를 500으로 수정하여 빌드 컴파일 실패 문제를 완결했습니다.
-* 매트한 종이 테마 위에 6E473B(황토 흙벽/점토색) 및 AD8350(황동/놋쇠 금빛)을 제한된 포인트로 사용하여 전통적이면서도 대단히 미려한 고급 장정 책자 스타일을 완성했습니다.
+* [hooks/useAnime.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/hooks/useAnime.ts)
+* [components/QuietFadeIn.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/QuietFadeIn.tsx)
+* [components/KnowledgeGraph.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/KnowledgeGraph.tsx) (신설)
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (신설)
+* [app/narrative/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/page.tsx) (리팩토링)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [app/role-selection/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/role-selection/page.tsx) (삭제)
 
 ---
 
 ## Date
 
-2026-07-31
+2026-08-01
 
 ## Task
 
-이음 (EEUM) 다크 모드 (야간 서첩 모드) 연계 및 자동/수동 토글 전환 기능 추가.
+`/home` 캘린더 뷰(Calendar View) 구축, 완료 동그라미 노란색 채움 애니메이션, 연속 회상 달성 일수(Streak) 표시, 날짜별 기록 모달 및 제출 로딩 스피너 고도화.
 
 ## AI Tool
 
@@ -157,46 +163,85 @@ Antigravity
 
 ## Agent
 
-Architect, Coder
+Planner, Architect, Coder
 
 ## Purpose
 
-지정된 어두운 테마 전용 색상 규격(Background `#121110`, Surface `#1E1C1A`, Text `#F4F0E8`, Accent `#A8A299`, Highlight `#C2955A`)을 적용하고, 로컬 시스템의 현재 시각을 모니터링하여 야간(오후 6시~오전 6시)에 자동으로 다크 모드로 전환되도록 함과 동시에, 사용자가 수동으로 즉각적인 조정을 취할 수 있는 토글 환경을 탑재하기 위함.
+어르신의 동기부여와 기록 성취감을 유도하기 위해 홈 화면에 월간 캘린더를 탑재하고, 회상 기록이 완료된 날짜에는 애니메이션과 함께 노란색 원 채움으로 시각화함. 또한 연속 회상 달성 일수(Streak)를 불꽃 배지로 표시하고, 날짜 클릭 시 해당 날짜의 기록 지면을 확인할 수 있는 팝업 모달을 연동함.
 
 ## Outcome
 
-* `ThemeProvider.tsx` 컨텍스트 프로바이더를 신설하여 시간 체크 주기 타이머(60초 마다 갱신) 및 localStorage 기반의 수동 설정 캐싱 로직 설계.
-* 다크 모드 시 `document.documentElement`에 `dark` 클래스를 할당하며, CSS 변수 바인딩 방식으로 globals.css 내 변수값을 재매핑하여 다크 모드를 완성함.
-* 붓글씨 펜선 SVG 나이테 렌더링에 사용되던 변수들도 다크 모드 시 차분한 회색 및 황토 금빛으로 자동 전사되도록 바인딩.
-* Next.js App Router의 빌드 컴파일/프리렌더 시 SSR 컨텍스트 Hydration 누수 오류 방지를 위해, 클라이언트 탑재 시까지 Provider 내 `opacity-0` 렌더링 레이어 보정 적용.
-* 루트, 역할선택, 홈, 기록, 나이테 화면 전체에 수동 ThemeSwitcher (Sun/Moon 토글 버튼) 장착 및 빌드 통과.
+* **완료 날짜 노란색 원 + anime.js Pop 애니메이션 (`CalendarWidget.tsx`)**:
+  * 회상 일기/답변이 완료된 날짜에 황금빛 노란 원 배경(`#F5C842`) 및 `anime.js` scale pop 모션 연출.
+  * 이전/다음 월 이동 기능 및 오늘 날짜 표시 제공.
+* **연속 회상 달성 일수 (Streak Counter)**:
+  * 사용자 답변 이력을 소급 분석하여 오늘/어제 기준 연속 기록 일수를 카운트하는 알고리즘 연동.
+  * 홈 인사말 영역 우측 상단에 `🔥 N일 연속 회상 중` 불꽃 배지 렌더링.
+* **날짜별 기록 상세 모달 (`DayDetailModal.tsx`)**:
+  * 캘린더 날짜 클릭 시 해당 날짜에 기록된 질문과 어르신의 답변 텍스트를 모달로 확인 가능.
+* **답변 제출 로딩 스피너 애니메이션 고도화 (`app/journal/page.tsx`)**:
+  * Form 제출 시 이중 회전 아우라 스피너와 함께 미세한 펄싱 텍스트 애니메이션 연동.
+* **프로덕션 빌드 통과**: `npm run build` 검증 완료.
 
 ## Files
 
-* [components/ThemeProvider.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/ThemeProvider.tsx)
-* [components/ThemeSwitcher.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/ThemeSwitcher.tsx)
-* [app/layout.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/layout.tsx)
-* [app/globals.css](file:///c:/Users/PC/Desktop/Projects/EEUM/app/globals.css)
-* [components/Button.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/Button.tsx)
-* [components/Input.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/Input.tsx)
-* [app/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/page.tsx)
-* [app/role-selection/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/role-selection/page.tsx)
-* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx)
-* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx)
-* [app/journal/complete/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/complete/page.tsx)
-* [app/narrative/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/page.tsx)
-
-* 컴파일 에러 해결 과정에서 Next.js SSR 및 정적 페이지 빌드 시 Provider Context 부재로 발생한 Prerender-error를 방어하기 위해 pre-hydration 시점에도 Context wrapper를 정상 렌더링하도록 렌더 트리를 영속화시켰습니다.
+* [components/CalendarWidget.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/CalendarWidget.tsx) (신설)
+* [components/DayDetailModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/DayDetailModal.tsx) (신설)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
 ---
 
 ## Date
 
-2026-07-31
+2026-08-01
 
 ## Task
 
-이음 (EEUM) 가입/역할선택 페이지(`role-selection/page.tsx`) 시네마틱 동영상 배경화면 적용 및 레이아웃 개편.
+백엔드 API, JSON Parse 및 DB Upload 테스트 자동화 환경 구축 (`npm run test:backend`).
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+백엔드 API 통신, Upstage Solar Pro 3 LLM JSON Mode 파싱, 11종 엔티티 추출, Safety Guard 위험 문장 차단, 그리고 Supabase DB Upload 및 In-memory Fallback 저장소를 자동으로 종합 검증하기 위함.
+
+## Outcome
+
+* **통합 테스트 스크립트 작성 (`tests/test-backend-api.ts`)**:
+  - Test 1: Solar Pro 3 LLM JSON Parse 검증
+  - Test 2: Agent 1 (ocr-extractor) 11종 엔티티 추출 검증
+  - Test 3: mindmap-analyzer 순수 계산 모듈 `signalScore` 스코어링
+  - Test 4: Agent 2 질문 생성 & Agent 4 우회 불가 안전검수
+  - Test 5: Agent 4 안전검수 금지 문장(의료 진단/처방) 차단 테스트
+  - Test 6: Supabase DB Upload & Read 검증
+  - Test 7: Agent 3 서사 4단계 릴레이 & DBNarrative DB Upload 검증
+* **Node.js 서버 인메모리 저장소 바인딩 (`services/supabase-service.ts`)**: CLI 스크립트 환경에서도 DB Upload 및 읽기가 영속화되도록 In-Memory Fallback Store 구현.
+* **테스트 결과**: `npm run test:backend` 실행 시 총 **12개 검증 항목 100% 통과 (Pass)** 달성.
+
+## Files
+
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (신설)
+* [package.json](file:///c:/Users/PC/Desktop/Projects/EEUM/package.json) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
+
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+세션 동기화 데이터 백업(`/save-session`) 및 Next.js CLI 환경변수 Dynamic Loading 설계 학습 스킬 추출(`/learn-eval`).
 
 ## AI Tool
 
@@ -208,65 +253,18 @@ Coder, Researcher
 
 ## Purpose
 
-지정된 고화질 비디오 배경화면(`videos/8087608-uhd_2160_4096_24fps.mp4`)을 웹 최적화하여 가입 페이지 배경에 매끄러운 루프로 배치하되, 가독성을 잃지 않도록 테마별 연동형 투명도 및 밝기 조절 마스크를 설정하고, 상단 로고 및 하단 버튼을 강조 배치하여 프리미엄 사용자 경험을 설계하기 위함.
+현재 개발이 완료된 4-에이전트 백엔드 API & Supabase 실시간 연동 빌드 이력을 세션 백업 파일에 담아 영속화하고, CLI 테스트 스크립트 구동 시 Next.js 모듈 번들 시점의 환경변수 캐싱 문제를 방어한 Dynamic Env Loading 설계 방식을 글로벌 학습 스킬 문서로 정돈하기 위함.
 
 ## Outcome
 
-* Next.js의 정적 리소스 서빙 규격에 맞게 `public/videos/` 디렉토리를 신설하여 원본 mp4 파일 복사 이식.
-* `role-selection/page.tsx`에 `<video>` 루프 재생 태그 및 dynamic overlay mask (`bg-background/85`)를 엮어 주간(크림)/야간(다크) 테마와 완벽하게 조화되는 시네마틱 수묵 움직임 배경 구성.
-* 상단 영역에 큼직한 이음 로고 심볼과 명조체 가입 타이틀을 부각해 브랜드 정체성 표명.
-* 하단 영역에 터치 크기가 강조된 두 가지 역할 가입 액션 버튼(*어르신 본인으로 가입*, *보호자 / 자녀로 가입*)을 정렬 배치하여 타겟팅 및 UI 완성.
+* **세션 데이터 백업 (`2026-08-02-eeum-backend-session.tmp`)**: `~/.claude/session-data/` 내에 이번 세션에 이루어진 변경 사항, 테스트 이력, 아키텍처 의사결정 내역을 누락 없이 요약 기록 완료.
+* **글로벌 스킬 문서 추출 (`nextjs-dynamic-env-loading.md`)**: 최상단 정적 변수 캐싱으로 인한 환경변수 유실을 해결하는 Dynamic Getter 함수 설계법 및 Fallback Model Retry 디자인 패턴을 전역 학습 스킬로 추출 완료.
 
 ## Files
 
-* [app/role-selection/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/role-selection/page.tsx)
-* [public/videos/8087608-uhd_2160_4096_24fps.mp4](file:///c:/Users/PC/Desktop/Projects/EEUM/public/videos/8087608-uhd_2160_4096_24fps.mp4)
-
-## Notes
-
-* 비디오 백그라운드 재생 시 미디어가 로드되기 전 레이아웃이 어색하게 깨지는 현상을 방어하기 위해 비디오 후면에 한지 질감 백그라운드를 깔아주어 로딩 갭을 깔끔하게 메웠습니다.
-
----
-
-## Date
-
-2026-07-31
-
-## Task
-
-이음 (EEUM) 신규 가입 프로세스 단계별 온보딩 위저드 및 전역 접근성(글꼴 크기, 색각 보정/고대비) 연동 구현.
-
-## AI Tool
-
-Antigravity
-
-## Agent
-
-Architect, Coder
-
-## Purpose
-
-어르신(self) 계정과 보호자(guardian) 계정의 가입 단계를 체계화한 4단계 스텝 입력 양식을 구현하고, 가입 과정에서 정의한 접근성 세팅(글씨 크기, 적녹/청황 색약 보정, 흑백 고대비)이 실제 앱 전역 폰트 스케일링 및 테마 변수에 유동적으로 적용되도록 실시간 Context 바인딩 처리를 구축하기 위함.
-
-## Outcome
-
-* `DBUser` 데이터 사양에 가입 관련 필드(email, password, dob, phone, userCode, textSize, colorVision 등) 추가 정의 및 mock 유저 연대기/암호 정보 seed 재배치.
-* globals.css에 글꼴 크기(`html.text-size-xl`), 흑백 고대비(`html.color-vision-contrast`), 색약 보정 스타일을 추가하고 CSS 변수 오버라이드로 테마 조화 유도.
-* `ThemeProvider.tsx` 내부에서 active user의 로컬 스토리지 설정을 지속 감시하여 루트 `html` 요소에 즉각적으로 CSS 클래스를 탈부착하도록 구현. 동시 탭 정합성을 위해 `eeum_user_changed` 커스텀 이벤트 바인딩 추가.
-* `role-selection/page.tsx`에서 즉시 로그인 대신 `/register?role=...` 경로로 가입 신청 연계하도록 리디렉션 처리.
-* `app/register/page.tsx`에 가입 단계 위저드를 신설하여 어르신(필수 정보, 접근성 설정, AI 주기, 사용 목적) 및 자녀(필수 정보, 어르신 연결코드/QR 리더 mock, 접근성 설정, 공동 질문 주기) 동선 완벽 구축 및 빌드 통과.
-
-## Files
-
-* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts)
-* [app/globals.css](file:///c:/Users/PC/Desktop/Projects/EEUM/app/globals.css)
-* [components/ThemeProvider.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/ThemeProvider.tsx)
-* [app/role-selection/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/role-selection/page.tsx)
-* [app/register/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/register/page.tsx)
-
-## Notes
-
-* 2단계에서 글자 크기와 색각 모드를 바꿀 때 가입 페이지 레이아웃이 실시간으로 커지고 고대비로 반전되는 등, 실감나는 반응형 접근성 효과를 구현하여 규칙 1번(Rich Aesthetics) 규격을 완벽하게 충족했습니다.
+* C:\Users\PC\.gemini\antigravity-ide\brain\931c7940-908c-4198-93f4-b5ffb0bb8a55\2026-08-02-eeum-backend-session.tmp
+* C:\Users\PC\.gemini\antigravity-ide\brain\931c7940-908c-4198-93f4-b5ffb0bb8a55\nextjs-dynamic-env-loading.md
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
 ---
 
@@ -276,7 +274,7 @@ Architect, Coder
 
 ## Task
 
-프로젝트 보안 상태 점검(AgentShield Security Scan) 및 취약성 제거, 개발 세션 백업(Session Save) 및 학습 지식 스킬 추출(Learn Skill).
+회상 구간/메모리 영역(`memoryZone`) 3가지 영역(sharedIndependentMemory, inheritedStory, soloPatientOnly) 질문 톤 분기 및 서사 챕터 태깅 확장.
 
 ## AI Tool
 
@@ -284,28 +282,31 @@ Antigravity
 
 ## Agent
 
-Security Reviewer, Researcher, Coder
+Planner, Architect, Coder
 
 ## Purpose
 
-AgentShield 보안 취약성 도구를 구동하여 프로젝트 설정 상의 취약성이나 기밀 노출 유무를 점검하고, 이음 프로젝트 10개 구현 단계를 모두 정상 통과한 후 개발 히스토리를 세션 백업 파일로 저장하고, 재사용 가능한 최적의 Next.js SSR 개발 학습 지식을 이탈 없이 스킬 파일로 영속 보관하기 위함.
+공통질문 생성 시 3가지 생애 주기 영역(`sharedIndependentMemory` 핵심 독립기억, `inheritedStory` 자녀 유아기 전해들은 이야기, `soloPatientOnly` 부모 단독 인생)에 맞춰 Upstage Solar Pro 3 시스템 프롬프트 톤을 다변화하고, 서사집 구성 시 자녀가 모르는 이야기/전해들은 기억 등의 챕터 태깅을 확장하기 위함.
 
 ## Outcome
 
-* `npx ecc-agentshield scan` 보안 정밀 검사를 통과시켜 100% 안전성 확보 (Grade A 만점 획득).
-* `CLAUDE.md` 권한 취약점 경고를 조치하기 위해 Windows CLI properties 및 `icacls` 권한 격리를 연계하여, Node.js fs.stat 상 `0o444`로 축소 리포트되도록 읽기 전용 속성 변경 조치.
-* 세션 백업 명세(`2026-08-01-eeum-onboarding-session.tmp`)를 `~/.claude/session-data/` 경로로 추출 저장하여 차기 개발 세션 인계 준비 완료.
-* Next.js App Router 빌드 시 Context Provider Hydration 및 SSR pre-rendering 누수로 인한 `prerender-error` 해결 지식을 `~/.claude/skills/learned/nextjs-ssr-context-wrapper.md` 학습 문서로 정갈하게 추출 보관.
+* **타입 정의 및 DB 스키마 확장 (`types/index.ts` & `services/supabase-service.ts`)**: `MemoryZone` 타입 추가 및 `DBQuestionHistory`, `DBAnswer`, `DBNarrative` 객체 사양 내 `memory_zone`, `chapterTag` 속성 확장.
+* **Agent 2 (question-generator-agent.ts) 톤 분기**:
+  - `sharedIndependentMemory`: 양쪽 모두 원본 기억 보유 개방형 질문 (`shared: true`, 관점 병합 최상위).
+  - `inheritedStory`: 자녀 유아기 시절의 전해들은 이야기 톤 및 2차 반응 유도 질문.
+  - `soloPatientOnly`: 자녀 출생 전 부모님의 단독 인생 질문 (`shared: false`, 자녀에게 동시 발송 안 함).
+* **Agent 3 (narrative-builder-agent.ts) 챕터 태깅**: `soloPatientOnly` 챕터에 `"solo_hidden_gem"`(*"자녀분이 모르는 부모님의 이야기"*) 태그 및 요약 뱃지 장착.
+* **API Routes & 테스트 검증**: `/api/questions` 연동 및 `tests/test-backend-api.ts` 통합 테스트 16개 항목 100% 통과(Pass).
 
 ## Files
 
-* [CLAUDE.md](file:///c:/Users/PC/Desktop/Projects/EEUM/CLAUDE.md)
-* C:\Users\PC\.claude\session-data\2026-08-01-eeum-onboarding-session.tmp
-* C:\Users\PC\.claude\skills\learned\nextjs-ssr-context-wrapper.md
-
-## Notes
-
-* 이번 보안 점검 및 학습 문서 정리를 끝으로 이음 프로젝트의 1단계 핵심 에디토리얼 기능 구현 마일스톤이 완전히 마무리되었습니다.
+* [types/index.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/types/index.ts) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [lib/agents/question-generator-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/question-generator-agent.ts) (수정)
+* [lib/agents/narrative-builder-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/narrative-builder-agent.ts) (수정)
+* [app/api/questions/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/route.ts) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
 ---
 
@@ -315,7 +316,7 @@ AgentShield 보안 취약성 도구를 구동하여 프로젝트 설정 상의 �
 
 ## Task
 
-이음 랜딩 페이지(메인 페이지) 에디토리얼 고도화 및 패키지 의존성 복구
+이음 플랫폼 전체 데이터베이스 스키마 명세서 작성 및 저장 (`docs/database-schema.md`).
 
 ## AI Tool
 
@@ -323,32 +324,152 @@ Antigravity
 
 ## Agent
 
-Coder, Visual Specialist
+Architect, Planner
 
 ## Purpose
 
-의존성 누락으로 실행 불가능하던 개발 환경을 복구하고, 이음 브랜드 아이덴티티를 대표하는 첫 랜딩 페이지를 세련되고 현대적인 Apple/Vercel 스타일의 시네마틱 비디오 히어로, 플로팅 아일랜드 네비게이션, 그리고 나이테 회상 방식 설명 중심의 피처 그리드 레이아웃으로 전면 개편하기 위함.
+현재 연동되어 작동 중인 테이블 7종과, 향후 고도화(Tier 2~3)를 위해 구축할 확장 테이블 5종을 포함한 전체 ERD, 컬럼별 속성표 및 원클릭 Supabase DDL 실행 SQL 스크립트를 문서화하여 보관하기 위함.
 
 ## Outcome
 
-* **의존성 오류 복구**: 누락되어 있던 `node_modules` 패키지를 `npm install` 명령어로 정상 복구하고, Next.js Turbopack 로컬 개발 서버(`npm run dev`) 구동에 성공.
-* **플로팅 아일랜드 네비게이션 바**: macOS/Arc Browser/Vercel 디자인을 차용하여 rounded-full, backdrop-blur-md, 투명 테두리 및 그림자가 적용된 플로팅 형태의 글래스모피즘 네비게이션 바 구현.
-* **시네마틱 비디오 히어로 (모바일/데스크톱 대응)**: 
-  * 모바일(세로형 화면): `10302168-uhd_2160_4096_25fps.mp4` 영상이 크롭 없이 최적의 비율로 재생되는 풀스크린 배경 비디오 및 글자 가독성을 돕는 60% 어두운 오버레이 구현.
-  * 데스크톱(가로형 화면): 세로형 비디오가 가로 화면에서 과도하게 줌인(object-cover로 인한 확대)되는 화질 손상 현상을 해결하기 위해, 배경에는 앰비언트 글로우 효과(30% 투명도 + blur-3xl)를 넣고 우측에는 UHD 세로 영상을 있는 그대로 담은 프레임 카드 목업을 배치하는 반응형 듀얼 레이아웃 설계.
-* **에디토리얼 피처 섹션**: 
-  * Section 2로 이동하는 스무스 스크롤 다운 기능과 마운트 시 타이포그래피 페이드인 효과 연계.
-  * 이음의 3대 가치(기록의 보관, 인지의 자극, 마음의 병합)를 보여주는 호버 반응형 인터랙티브 카드 및 나이테 연대기 시각화용 나이테 동심원 SVG 드로잉을 조화롭게 통합.
-* **빌드 안정성 검증**: `npm run build` 프로덕션 빌드를 무오류로 통과하여 TypeScript 정적 타입 및 React Hydration 안정성 확보.
+* **`docs/database-schema.md` 생성 완료**:
+  - 12개 테이블 ERD Diagram (Mermaid)
+  - 7개 현재 완결 테이블 명세표
+  - 5개 미래 확장 테이블 명세표 (`voice_journals`, `ocr_scans`, `family_invites`, `safety_logs`, `notifications`)
+  - Supabase DDL SQL 실행 스크립트 수록.
 
 ## Files
 
-* [app/page.tsx](file:///c:/Users/USER/OneDrive/사진/바탕 화면/AI-Builder-Sprint-main/app/page.tsx)
+* [docs/database-schema.md](file:///c:/Users/PC/Desktop/Projects/EEUM/docs/database-schema.md) (신설)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
-## Notes
+---
 
-* 미디어 에셋의 한계를 딛고 데스크톱 화면 비율에서 세로형 비디오가 지나치게 확대(zoomed)되는 이슈를 앰비언트 블러(Ambient Blur) 배경 및 오른쪽 프레임 모형 카드로 완벽하게 우회하여, 세련된 비주얼과 최고 수준의 가독성(Rich Aesthetics)을 달성했습니다.
+## Date
 
+2026-08-01
+
+## Task
+
+사용자 본인 및 연동된 보호자(자녀)의 사진/텍스트 맞춤 대화 주제 생성 기능 구축.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+AI 자동 질문 외에도 어르신 본인이나 자녀가 직접 텍스트 추억 힌트 또는 옛 사진/편지를 제공하면, Upstage OCR 및 Agent 2(Question Generator)를 통해 정겨운 회상 대화 질문으로 다듬고 즉시 저널 작성 지면으로 연결하기 위함.
+
+## Outcome
+
+* **Agent 2 커스텀 질문 메서드 구현 (`generateCustomTopicQuestion`)**: 텍스트 키워드 및 OCR 엔티티를 바탕으로 따뜻한 1개의 회상 개방형 질문 생성.
+* **커스텀 질문 생성 API 라우트 구축 (`app/api/questions/custom/route.ts`)**: 사진 업로드 시 Upstage OCR ➔ Agent 1 ➔ Agent 2 ➔ Agent 4 안전검수 ➔ Supabase `questions_history` DB 저장 파이프라인 완성.
+* **직접 추억 주제 만들기 모달 컴포넌트 (`components/CustomTopicModal.tsx`)**: 텍스트 적기/사진 첨부 탭, OCR 스캔 로딩 모션 및 생성 완료 시 저널 지면(`/journal?qid=...&qtext=...`) 자동 이동 UI 탑재.
+* **홈 화면 (`app/home/page.tsx`) 버튼 연결**: **"✦ 직접 추억 주제 만들기"** 버튼 배치 및 모달 연동.
+* **통합 테스트 및 프로덕션 빌드 통과**: `tests/test-backend-api.ts` Test 9 검증 18개 항목 100% 통과 및 `npm run build` 정상 완료.
+
+## Files
+
+* [lib/agents/question-generator-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/question-generator-agent.ts) (수정)
+* [app/api/questions/custom/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/custom/route.ts) (신설)
+* [components/CustomTopicModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/CustomTopicModal.tsx) (신설)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [types/index.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/types/index.ts) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
+
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+오늘의 일상 일기(Daily Diary) 작성 기능 및 수학적 확률 수식 기반 질문 유동 선출 알고리즘 구축.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+어르신이 오늘 하루의 소소한 일상(산책, 통화, 기분 등)을 기록하는 전용 일기 지면을 제공하고, AI가 질문을 생성할 때 최근 일기 작성 빈도 및 공백 일수를 고려한 수학적 확률 공식 $P(\text{DiaryBased})$을 이용해 **개인적 원본 회상 질문**과 **최근 일기 연계 기억 질문**을 유동적으로 선출하기 위함.
+
+## Outcome
+
+* **수학적 빈도/공백 확률 수식 연동 (`lib/analytics/mindmap-analyzer.ts`)**:
+  - $P(\text{DiaryBased}) = \text{Clamp}(0.2, 0.8, 0.25 + 0.15 \times N_{\text{recent\_diaries}} - 0.04 \times D_{\text{gap}} + 0.1 \times S_{\text{signal}})$ 수식 구현.
+* **Agent 2 질문 생성기 연동 (`lib/agents/question-generator-agent.ts`)**:
+  - `recent_diary_recall` 선출 시 최근 일상 일기 내용과 유년 시절 원본 추억 엔티티를 자연스럽게 엮은 인지 자극 질문 생성.
+* **일상 일기 작성 모달 (`components/DailyDiaryModal.tsx`)**: 날씨/기분 칩 선택 및 소소한 일상 작성 ➔ 저장 시 오늘 질문 자동 갱신.
+* **홈 메인 화면 연동 (`app/home/page.tsx`)**: **"✏️ 오늘 일상 일기 적기"** 버튼 배치 및 모달 연동.
+* **통합 테스트 및 프로덕션 빌드 통과**: `tests/test-backend-api.ts` Test 10 검증 21개 항목 100% 통과 및 `npm run build` 성공.
+
+## Files
+
+* [lib/analytics/mindmap-analyzer.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/analytics/mindmap-analyzer.ts) (수정)
+* [lib/agents/question-generator-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/question-generator-agent.ts) (수정)
+* [components/DailyDiaryModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/DailyDiaryModal.tsx) (신설)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [app/api/questions/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/route.ts) (수정)
+* [types/index.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/types/index.ts) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
+
+---
+
+## Date
+
+2026-08-01
+
+## Task
+
+전용 일상 일기 페이지(`/daily-diary`) 신설, 감정 항목 제거, 단일 하루 주제 질문 제시 및 멀티모달(텍스트/음성/사진) 입력 지원 개편.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+모달 팝업 대신 전용 새로운 라우트(`/daily-diary`)로 라우팅하여 일상 일기를 정갈하게 기록할 수 있도록 하고, 감정 선택 항목을 없애는 대신 *"오늘 어떤 일이 있으셨고, 특별히 맛있게 드신 음식이 있으신가요?"*와 같은 다정한 하루 일상 주제를 제시하며 텍스트/음성(STT)/사진을 자유롭게 기록할 수 있도록 하기 위함.
+
+## Outcome
+
+* **전용 독립 일상 일기 라우트 구축 (`app/daily-diary/page.tsx`)**:
+  - 상단에 다정한 일상 주제 구절 제시: *"오늘 어떤 일이 있으셨고, 특별히 맛있게 드신 음식이 있으신가요?"*
+  - 감정 선택 칩 항목 제거.
+  - ✍️ **텍스트 직접 작성**, 🎙️ **음성 말하기(Web Speech API STT)**, 🖼️ **오늘의 일상 사진 업로드** 3가지 멀티모달 형식 지원.
+* **홈 메인 라우팅 변경 (`app/home/page.tsx`)**:
+  - **"오늘 일상 일기 적기 ✦"** 클릭 시 모달이 아닌 `/daily-diary` 라우트로 연결.
+* **통합 테스트 & 프로덕션 빌드 통과**:
+  - `tests/test-backend-api.ts` Test 10 검증 통과 및 `npm run build`에 `○ /daily-diary` 정적 라우트 무오류 생성 완료.
+
+## Files
+
+* [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (신설)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [types/index.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/types/index.ts) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [components/DailyDiaryModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/DailyDiaryModal.tsx) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md)
 
 
 

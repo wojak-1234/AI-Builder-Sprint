@@ -38,7 +38,7 @@ export default function RootLayout({
       lang="ko"
       className={`${notoSerifKr.variable} ${notoSansKr.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground antialiased font-sans">
+      <body className="h-full flex flex-col bg-background text-foreground antialiased font-sans">
         <ThemeProvider>
           <PWARegister />
           {children}

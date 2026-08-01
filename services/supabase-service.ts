@@ -1,7 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+export type MemoryZone =
+  | "sharedIndependentMemory" // 핵심 공통 독립기억 (양쪽 직접경험)
+  | "inheritedStory"          // 전해들은 이야기 (자녀 유아기)
+  | "soloPatientOnly";        // 부모 단독 인생 (자녀 출생 전)
 
 // Standard types for the database
 export type DBUser = {
@@ -14,7 +16,7 @@ export type DBUser = {
   dob?: string;          // For Elderly (self)
   phone?: string;        // For Guardian
   userCode?: string;     // Unique connection code for elderly pairing
-  
+
   // Accessibility
   textSize?: "small" | "medium" | "large" | "xl";
   colorVision?: "default" | "daltonism" | "tritanopia" | "contrast";
@@ -38,6 +40,16 @@ export type DBAnswer = {
   event_date: string; // ISO string or YYYY-MM-DD
   is_private: boolean;
   by_guardian: boolean;
+  memory_zone?: MemoryZone;
+};
+
+export type DBDailyDiary = {
+  id: string;
+  user_id: string;
+  content: string;
+  photo_url?: string;
+  created_at: string;
+  event_date: string;
 };
 
 export type DBQuestionHistory = {
@@ -47,6 +59,10 @@ export type DBQuestionHistory = {
   created_at: string;
   status: "pending" | "answered";
   shared: boolean;
+  memory_zone?: MemoryZone;
+  created_by?: "self" | "guardian";
+  custom_image_url?: string;
+  question_kind?: "personal_reminiscence" | "recent_diary_recall";
 };
 
 export type MergedPerspective = {
@@ -54,6 +70,7 @@ export type MergedPerspective = {
   userText?: string;
   guardianText?: string;
   differences?: string[];
+  memoryZone?: MemoryZone;
 };
 
 export type DBNarrative = {
@@ -65,18 +82,38 @@ export type DBNarrative = {
   event_date: string;
   created_at: string;
   mergedAnswers?: MergedPerspective[];
+  chapterTag?: "shared" | "inherited" | "solo_hidden_gem";
 };
 
-// Check if we are running in the browser and env variables are missing
+const getCredentials = () => {
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim();
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").trim();
+  
+  const isValidUrl = (url.startsWith("http://") || url.startsWith("https://")) && !url.includes("your-project-id");
+  if (!isValidUrl || !key) {
+    return { url: "", key: "" };
+  }
+  return { url, key };
+};
+
+let cachedClient: SupabaseClient | null = null;
+
+export const getSupabaseClient = (): SupabaseClient | null => {
+  const { url, key } = getCredentials();
+  if (!url || !key) return null;
+  if (!cachedClient) {
+    cachedClient = createClient(url, key);
+  }
+  return cachedClient;
+};
+
+export const isMockMode = (): boolean => {
+  const { url, key } = getCredentials();
+  return !url || !key;
+};
+
+// Check if we are running in the browser
 const isBrowser = typeof window !== "undefined";
-const useMock = !supabaseUrl || !supabaseAnonKey;
-
-// Real Supabase Client (only instantiated if env vars are present)
-export const supabase = !useMock ? createClient(supabaseUrl, supabaseAnonKey) : null;
-
-if (useMock && isBrowser) {
-  console.warn("Supabase credentials missing. Falling back to LocalStorage Mock Database.");
-}
 
 // In-Memory/LocalStorage Database helper for Mock Mode
 const MOCK_KEYS = {
@@ -84,26 +121,32 @@ const MOCK_KEYS = {
   ANSWERS: "eeum_mock_answers",
   QUESTIONS: "eeum_mock_questions",
   NARRATIVES: "eeum_mock_narratives",
+  DAILY_DIARIES: "eeum_mock_daily_diaries",
   CURRENT_USER: "eeum_mock_curr_user",
 };
 
+// Global in-memory fallback store for Node.js server environments
+const memoryStore = new Map<string, any>();
+
 const getLocalStorageItem = <T>(key: string, defaultValue: T): T => {
-  if (!isBrowser) return defaultValue;
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : defaultValue;
+  if (isBrowser) {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  }
+  return memoryStore.has(key) ? memoryStore.get(key) : defaultValue;
 };
 
 const setLocalStorageItem = <T>(key: string, value: T): void => {
   if (isBrowser) {
     localStorage.setItem(key, JSON.stringify(value));
+  } else {
+    memoryStore.set(key, value);
   }
 };
 
 // Seed initial data if mock database is empty
 const seedMockDatabase = () => {
-  if (!isBrowser) return;
-
-  if (!localStorage.getItem(MOCK_KEYS.USERS)) {
+  if (!getLocalStorageItem(MOCK_KEYS.USERS, null)) {
     const defaultUser: DBUser = {
       id: "user-elderly-123",
       role: "self",
@@ -129,14 +172,13 @@ const seedMockDatabase = () => {
       questionFrequency: "once",
       created_at: new Date().toISOString(),
     };
-    // Pair them back
     defaultUser.paired_user_id = "user-guardian-456";
 
     setLocalStorageItem(MOCK_KEYS.USERS, [defaultUser, defaultGuardian]);
     setLocalStorageItem(MOCK_KEYS.CURRENT_USER, defaultUser);
   }
 
-  if (!localStorage.getItem(MOCK_KEYS.QUESTIONS)) {
+  if (!getLocalStorageItem(MOCK_KEYS.QUESTIONS, null)) {
     const initialQuestions: DBQuestionHistory[] = [
       {
         id: "q-1",
@@ -166,7 +208,7 @@ const seedMockDatabase = () => {
     setLocalStorageItem(MOCK_KEYS.QUESTIONS, initialQuestions);
   }
 
-  if (!localStorage.getItem(MOCK_KEYS.ANSWERS)) {
+  if (!getLocalStorageItem(MOCK_KEYS.ANSWERS, null)) {
     const initialAnswers: DBAnswer[] = [
       {
         id: "a-1-elderly",
@@ -184,8 +226,8 @@ const seedMockDatabase = () => {
         user_id: "user-guardian-456",
         question_id: "q-1",
         question_text: "어릴 적 마당이 있던 집에서 가장 좋아했던 놀이는 무엇이었나요?",
-        answer_text: "어머니가 옛날에 마당 넓은 기와집에 사셨다고 자주 말씀하셨어요. 특히 그 마당에 큰 감나무가 있었는데, 가을에 홍시를 따서 동네 친구들이랑 나눠 먹는 게 낙이었다고 하셨던 기억이 납니다.",
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+        answer_text: "엄마가 어릴 때 마당에 큰 감나무가 있는 한옥에 사셨다고 들었어요. 이모들이랑 삼촌들이랑 감나무 홍시 따 먹으려고 기다리던 추억을 이야기해 주실 때 제일 표정이 밝으셨어요.",
+        created_at: new Date(Date.now() - 86400000 * 2 + 3600000).toISOString(),
         event_date: "1955-10-15",
         is_private: false,
         by_guardian: true,
@@ -195,7 +237,7 @@ const seedMockDatabase = () => {
         user_id: "user-elderly-123",
         question_id: "q-2",
         question_text: "학창 시절 소풍 가던 날 아침의 설렘이나 준비했던 도시락 반찬이 기억나시나요?",
-        answer_text: "소풍날 아침엔 새벽같이 눈이 떠졌지. 어머니가 부엌에서 솔솔 참기름 냄새 풍기며 김밥을 말아주시던 게 최고였어. 요즘 김밥이랑 다르게 단무지랑 시금치만 들었어도 꿀맛이었단다. 분홍 소시지도 한 장 구워 얹어주시면 온 세상을 얻은 것 같았어.",
+        answer_text: "소풍 가기 전날 밤은 너무 설레서 잠을 못 잤어. 엄마가 새벽 일찍 일어나셔서 고소한 참기름 냄새를 풍기며 분홍 소시지에 계란 옷 입혀서 도시락을 싸 주셨지. 소풍 가서 친구들이랑 돗자리 깔고 나누어 먹던 그 맛은 평생 못 잊어.",
         created_at: new Date(Date.now() - 86400000).toISOString(),
         event_date: "1964-05-20",
         is_private: false,
@@ -205,7 +247,7 @@ const seedMockDatabase = () => {
     setLocalStorageItem(MOCK_KEYS.ANSWERS, initialAnswers);
   }
 
-  if (!localStorage.getItem(MOCK_KEYS.NARRATIVES)) {
+  if (!getLocalStorageItem(MOCK_KEYS.NARRATIVES, null)) {
     const initialNarratives: DBNarrative[] = [
       {
         id: "n-1",
@@ -230,26 +272,25 @@ const seedMockDatabase = () => {
   }
 };
 
-// Run mock seeding on browser load
-if (useMock) {
+if (isMockMode()) {
   seedMockDatabase();
 }
 
 // Database Service Interface
 export const supabaseService = {
   getCurrentUser: async (): Promise<DBUser | null> => {
-    if (useMock) {
+    if (isMockMode()) {
       return getLocalStorageItem<DBUser | null>(MOCK_KEYS.CURRENT_USER, null);
     }
-    // Real Supabase integration
-    const { data: { user } } = await supabase!.auth.getUser();
+    const client = getSupabaseClient()!;
+    const { data: { user } } = await client.auth.getUser();
     if (!user) return null;
-    const { data } = await supabase!.from("users").select("*").eq("id", user.id).single();
+    const { data } = await client.from("users").select("*").eq("id", user.id).single();
     return data as DBUser;
   },
 
   setCurrentUser: async (user: DBUser): Promise<void> => {
-    if (useMock) {
+    if (isMockMode()) {
       setLocalStorageItem(MOCK_KEYS.CURRENT_USER, user);
       const users = getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
       if (!users.some((u) => u.id === user.id)) {
@@ -261,41 +302,45 @@ export const supabaseService = {
       }
       return;
     }
-    await supabase!.from("users").upsert(user);
+    const client = getSupabaseClient()!;
+    await client.from("users").upsert(user);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("eeum_user_changed"));
     }
   },
 
   getAllUsers: async (): Promise<DBUser[]> => {
-    if (useMock) {
+    if (isMockMode()) {
       return getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
     }
-    const { data } = await supabase!.from("users").select("*");
+    const client = getSupabaseClient()!;
+    const { data } = await client.from("users").select("*");
     return (data as DBUser[]) || [];
   },
 
   getQuestions: async (userId: string): Promise<DBQuestionHistory[]> => {
-    if (useMock) {
+    if (isMockMode()) {
       const q = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
       return q.filter((x) => x.user_id === userId || x.user_id === "user-elderly-123");
     }
-    const { data } = await supabase!.from("questions_history").select("*").eq("user_id", userId);
+    const client = getSupabaseClient()!;
+    const { data } = await client.from("questions_history").select("*").eq("user_id", userId);
     return (data as DBQuestionHistory[]) || [];
   },
 
   addQuestion: async (question: DBQuestionHistory): Promise<void> => {
-    if (useMock) {
+    if (isMockMode()) {
       const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
       questions.push(question);
       setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
       return;
     }
-    await supabase!.from("questions_history").insert(question);
+    const client = getSupabaseClient()!;
+    await client.from("questions_history").insert(question);
   },
 
   updateQuestionStatus: async (questionId: string, status: "pending" | "answered"): Promise<void> => {
-    if (useMock) {
+    if (isMockMode()) {
       const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
       const idx = questions.findIndex((q) => q.id === questionId);
       if (idx !== -1) {
@@ -304,75 +349,191 @@ export const supabaseService = {
       }
       return;
     }
-    await supabase!.from("questions_history").update({ status }).eq("id", questionId);
+    const client = getSupabaseClient()!;
+    await client.from("questions_history").update({ status }).eq("id", questionId);
+  },
+
+  saveQuestionHistory: async (qHistory: DBQuestionHistory): Promise<void> => {
+    if (isMockMode()) {
+      const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+      const idx = questions.findIndex((q) => q.id === qHistory.id);
+      if (idx !== -1) {
+        questions[idx] = qHistory;
+      } else {
+        questions.unshift(qHistory);
+      }
+      setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
+      return;
+    }
+    const client = getSupabaseClient()!;
+    await client.from("questions_history").upsert(qHistory);
   },
 
   getAnswers: async (userId: string): Promise<DBAnswer[]> => {
-    if (useMock) {
+    if (isMockMode()) {
       const answers = getLocalStorageItem<DBAnswer[]>(MOCK_KEYS.ANSWERS, []);
-      // If client is guardian, fetch answers of the paired patient + guardian's answers
       const users = getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
       const me = users.find((u) => u.id === userId);
+
       if (me && me.role === "guardian" && me.paired_user_id) {
         return answers.filter(
-          (a) => a.user_id === userId || a.user_id === me.paired_user_id
+          (a) => (a.user_id === userId || a.user_id === me.paired_user_id) && !a.is_private
         );
       }
-      if (me && me.role === "self" && me.paired_user_id) {
-        // Patient can see paired guardian's answers (unless marked private)
-        return answers.filter(
-          (a) => a.user_id === userId || (a.user_id === me.paired_user_id && !a.is_private)
-        );
-      }
-      return answers.filter((a) => a.user_id === userId);
+      return answers.filter((a) => a.user_id === userId || a.user_id === "user-elderly-123");
     }
-    const { data } = await supabase!.from("answers").select("*").eq("user_id", userId);
+    const client = getSupabaseClient()!;
+    const { data } = await client.from("answers").select("*").eq("user_id", userId);
     return (data as DBAnswer[]) || [];
   },
 
   saveAnswer: async (answer: DBAnswer): Promise<void> => {
-    if (useMock) {
+    if (isMockMode()) {
+      console.log("   [Mock DB] Saving Answer to Local/In-Memory store:", answer.id);
       const answers = getLocalStorageItem<DBAnswer[]>(MOCK_KEYS.ANSWERS, []);
-      answers.push(answer);
+      const idx = answers.findIndex((a) => a.id === answer.id);
+      if (idx !== -1) {
+        answers[idx] = answer;
+      } else {
+        answers.push(answer);
+      }
       setLocalStorageItem(MOCK_KEYS.ANSWERS, answers);
       return;
     }
-    await supabase!.from("answers").insert(answer);
+    console.log("   [Real Supabase] Saving Answer to Table 'answers':", answer.id);
+    const client = getSupabaseClient()!;
+    const { error } = await client.from("answers").upsert(answer);
+    if (error) {
+      console.error("Supabase saveAnswer error:", error);
+    }
   },
 
   getNarratives: async (userId: string): Promise<DBNarrative[]> => {
-    if (useMock) {
+    if (isMockMode()) {
       const narratives = getLocalStorageItem<DBNarrative[]>(MOCK_KEYS.NARRATIVES, []);
-      // If user is guardian, fetch narratives of their paired user too
-      const users = getLocalStorageItem<DBUser[]>(MOCK_KEYS.USERS, []);
-      const me = users.find((u) => u.id === userId);
-      if (me && me.role === "guardian" && me.paired_user_id) {
-        return narratives.filter((n) => n.user_id === me.paired_user_id || n.user_id === userId);
-      }
-      return narratives.filter((n) => n.user_id === userId);
+      return narratives.filter((n) => n.user_id === userId || n.user_id === "user-elderly-123");
     }
-    const { data } = await supabase!.from("narratives").select("*").eq("user_id", userId);
-    return (data as DBNarrative[]) || [];
+    const client = getSupabaseClient()!;
+    const { data } = await client.from("narratives").select("*").eq("user_id", userId);
+    if (!data) return [];
+    return data.map((row: any) => ({
+      id: row.id,
+      user_id: row.user_id,
+      title: row.title,
+      summary: row.summary,
+      content: row.content,
+      event_date: row.event_date,
+      created_at: row.created_at,
+      mergedAnswers: row.merged_answers
+    }));
   },
 
   saveNarrative: async (narrative: DBNarrative): Promise<void> => {
-    if (useMock) {
+    if (isMockMode()) {
+      console.log("   [Mock DB] Saving Narrative to Local/In-Memory store:", narrative.id);
       const narratives = getLocalStorageItem<DBNarrative[]>(MOCK_KEYS.NARRATIVES, []);
-      narratives.push(narrative);
+      const idx = narratives.findIndex((n) => n.id === narrative.id);
+      if (idx !== -1) {
+        narratives[idx] = narrative;
+      } else {
+        narratives.push(narrative);
+      }
       setLocalStorageItem(MOCK_KEYS.NARRATIVES, narratives);
       return;
     }
-    await supabase!.from("narratives").insert(narrative);
+    console.log("   [Real Supabase] Saving Narrative to Table 'narratives':", narrative.id);
+    const client = getSupabaseClient()!;
+    
+    const dbPayload = {
+      id: narrative.id,
+      user_id: narrative.user_id,
+      title: narrative.title,
+      summary: narrative.summary,
+      content: narrative.content,
+      event_date: narrative.event_date,
+      created_at: narrative.created_at,
+      merged_answers: narrative.mergedAnswers
+    };
+
+    const { error } = await client.from("narratives").upsert(dbPayload);
+    if (error) {
+      console.error("Supabase saveNarrative error:", error);
+    }
   },
 
   resetMockData: (): void => {
-    if (useMock && isBrowser) {
+    if (typeof window !== "undefined") {
       localStorage.removeItem(MOCK_KEYS.USERS);
-      localStorage.removeItem(MOCK_KEYS.QUESTIONS);
       localStorage.removeItem(MOCK_KEYS.ANSWERS);
+      localStorage.removeItem(MOCK_KEYS.QUESTIONS);
       localStorage.removeItem(MOCK_KEYS.NARRATIVES);
       localStorage.removeItem(MOCK_KEYS.CURRENT_USER);
-      seedMockDatabase();
     }
-  }
+  },
+
+  addMockGuardianNarrative: async (userId: string): Promise<DBNarrative> => {
+    const newNarrative: DBNarrative = {
+      id: `n-guardian-${Date.now()}`,
+      user_id: userId,
+      title: "자녀가 회상한 1978년 가을 소풍 이야기",
+      summary: "[세대 연결] 자녀의 추가 회상이 마인드맵에 결합되었습니다.",
+      content: "어머니가 싸주셨던 김밥에 참기름 냄새가 솔솔 풍겼던 가을 소풍날이 아직도 눈에 선합니다.",
+      event_date: "1978-10-15",
+      created_at: new Date().toISOString(),
+      chapterTag: "shared",
+      mergedAnswers: [
+        {
+          question: "1978년 가을 소풍날 기억이 떠오르시나요?",
+          userText: "마당에서 김밥 싸 들고 들판으로 나갔던 기억이 난단다.",
+          guardianText: "엄마가 싸준 김밥 참기름 냄새가 너무 좋았어요!",
+          differences: ["서로의 소중한 기억이 동일한 사건 아래 아름답게 연결되었습니다."]
+        }
+      ]
+    };
+    await supabaseService.saveNarrative(newNarrative);
+    return newNarrative;
+  },
+
+  saveDailyDiary: async (diary: DBDailyDiary): Promise<void> => {
+    // Always store in Local/In-Memory fallback store first
+    const diaries = getLocalStorageItem<DBDailyDiary[]>(MOCK_KEYS.DAILY_DIARIES, []);
+    const idx = diaries.findIndex((d) => d.id === diary.id);
+    if (idx !== -1) {
+      diaries[idx] = diary;
+    } else {
+      diaries.unshift(diary);
+    }
+    setLocalStorageItem(MOCK_KEYS.DAILY_DIARIES, diaries);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        await client.from("daily_diaries").upsert(diary);
+      } catch (err) {
+        console.warn("Supabase saveDailyDiary warning (falling back to memory):", err);
+      }
+    }
+  },
+
+  getRecentDailyDiaries: async (userId: string): Promise<DBDailyDiary[]> => {
+    const localDiaries = getLocalStorageItem<DBDailyDiary[]>(MOCK_KEYS.DAILY_DIARIES, []);
+    const filteredLocal = localDiaries.filter((d) => d.user_id === userId || d.user_id === "user-elderly-123");
+
+    if (isMockMode()) {
+      return filteredLocal;
+    }
+    try {
+      const client = getSupabaseClient()!;
+      const { data, error } = await client
+        .from("daily_diaries")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error || !data) return filteredLocal;
+      return data as DBDailyDiary[];
+    } catch (err) {
+      return filteredLocal;
+    }
+  },
 };

@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from "next/server";
+import { upstageService } from "@/services/upstage-service";
+import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
+import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
+import { safetyGuardAgent } from "@/lib/agents/safety-guard-agent";
+import { supabaseService, DBQuestionHistory } from "@/services/supabase-service";
+
+export async function POST(req: NextRequest) {
+  try {
+    const contentType = req.headers.get("content-type") || "";
+    let userId = "user-elderly-123";
+    let textHint = "";
+    let creatorRole: "self" | "guardian" = "self";
+    let extractedEntities: any[] = [];
+    let imageFile: File | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      userId = (formData.get("userId") as string) || userId;
+      textHint = (formData.get("textHint") as string) || "";
+      creatorRole = ((formData.get("creatorRole") as string) || "self") as "self" | "guardian";
+      imageFile = formData.get("file") as File | null;
+    } else {
+      const body = await req.json();
+      userId = body.userId || userId;
+      textHint = body.textHint || "";
+      creatorRole = body.creatorRole || "self";
+    }
+
+    // Process image file with OCR (Agent 1) if uploaded
+    if (imageFile) {
+      try {
+        const upstageResult = await upstageService.parseDocument(imageFile);
+        const ocrResult = await ocrExtractorAgent.extract(upstageResult.text);
+        extractedEntities = ocrResult.entities.map((e) => ({
+          type: e.type,
+          value: e.value,
+          sourceAnswerId: "custom-upload",
+        }));
+        if (!textHint && ocrResult.text) {
+          textHint = ocrResult.text.substring(0, 100);
+        }
+      } catch (ocrErr) {
+        console.warn("Custom topic OCR parsing warning:", ocrErr);
+      }
+    }
+
+    // Call Agent 2 for custom question generation
+    const generated = await questionGeneratorAgent.generateCustomTopicQuestion(
+      textHint,
+      extractedEntities,
+      creatorRole
+    );
+
+    // Call Agent 4 for safety verification
+    let finalQText = generated.question;
+    const safetyCheck = await safetyGuardAgent.verify(finalQText);
+    if (!safetyCheck.passed) {
+      finalQText = textHint
+        ? `"${textHint}"에 얽힌 정겹고 따뜻했던 시절의 이야기를 나누어 주시겠어요?`
+        : "사진 속 소중한 그날에 나누었던 도런도런 이야기를 나누어 주시겠어요?";
+    }
+
+    // Save to Database (questions_history)
+    const qid = `q-custom-${Date.now()}`;
+    const newQHistory: DBQuestionHistory = {
+      id: qid,
+      user_id: userId,
+      question_text: finalQText,
+      created_at: new Date().toISOString(),
+      status: "pending",
+      shared: generated.shared,
+      memory_zone: "sharedIndependentMemory",
+      created_by: creatorRole,
+    };
+
+    await supabaseService.saveQuestionHistory(newQHistory);
+
+    return NextResponse.json({
+      success: true,
+      qid,
+      qtext: finalQText,
+      shared: generated.shared,
+      creatorRole,
+    });
+  } catch (err: any) {
+    console.error("API /api/questions/custom error:", err);
+    return NextResponse.json(
+      { error: err.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

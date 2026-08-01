@@ -1,29 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/Button";
+import { useRouter, useSearchParams } from "next/navigation";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { supabaseService, DBUser, DBQuestionHistory } from "@/services/supabase-service";
+import CompletionModal from "@/components/CompletionModal";
+import CalendarWidget from "@/components/CalendarWidget";
+import DayDetailModal from "@/components/DayDetailModal";
+import CustomTopicModal from "@/components/CustomTopicModal";
+import { supabaseService, DBUser, DBQuestionHistory, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
-import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity } from "lucide-react";
+import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun } from "lucide-react";
 
-export default function HomePage() {
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<DBUser | null>(null);
   const [todayQuestion, setTodayQuestion] = useState<DBQuestionHistory | null>(null);
+  const [answers, setAnswers] = useState<DBAnswer[]>([]);
+  const [recentDiaries, setRecentDiaries] = useState<DBDailyDiary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isDailyDiaryModalOpen, setIsDailyDiaryModalOpen] = useState(false);
 
-  // Load active user and today's question
+  // Calendar Selection Modal state
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDayAnswers, setSelectedDayAnswers] = useState<DBAnswer[]>([]);
+
+  useEffect(() => {
+    if (searchParams.get("completed") === "true") {
+      setShowCompletionModal(true);
+    }
+  }, [searchParams]);
+
+  const handleCloseModal = () => {
+    setShowCompletionModal(false);
+    router.replace("/home");
+  };
+
+  // Load active user, today's question, user answers, and recent diaries
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        // Get current user
         let currUser = await supabaseService.getCurrentUser();
         if (!currUser) {
-          // Fallback if not set
           currUser = {
             id: "user-elderly-123",
             role: "self",
@@ -35,30 +57,35 @@ export default function HomePage() {
         }
         setUser(currUser);
 
-        // Fetch questions
         const elderlyId = currUser.role === "self" ? currUser.id : currUser.paired_user_id || "user-elderly-123";
+
+        // Load all answers for calendar & streak
+        const allAnswers = await supabaseService.getAnswers(elderlyId);
+        setAnswers(allAnswers);
+
+        // Load recent daily diaries
+        const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
+        setRecentDiaries(diaries);
+
+        // Fetch questions
         const questions = await supabaseService.getQuestions(elderlyId);
-        
-        // Find first pending question
         let pendingQ = questions.find((q) => q.status === "pending");
-        
+
         if (!pendingQ) {
-          // If no pending question, generate one using question-generator-agent
-          const answers = await supabaseService.getAnswers(elderlyId);
-          const newQs = await questionGeneratorAgent.generateQuestions([], answers, true);
-          if (newQs.length > 0) {
+          const newQs = await questionGeneratorAgent.generateQuestions([], allAnswers, true);
+          if (newQs.questions && newQs.questions.length > 0) {
             pendingQ = {
               id: `q-${Date.now()}`,
               user_id: elderlyId,
-              question_text: newQs[0].text,
+              question_text: newQs.questions[0],
               created_at: new Date().toISOString(),
               status: "pending",
-              shared: newQs[0].shared
+              shared: true
             };
             await supabaseService.addQuestion(pendingQ);
           }
         }
-        
+
         setTodayQuestion(pendingQ || null);
       } catch (err) {
         console.error("Error loading home data:", err);
@@ -69,6 +96,39 @@ export default function HomePage() {
 
     loadData();
   }, []);
+
+  // Calculate Streak (Consecutive active days)
+  const calculateStreak = (answersList: DBAnswer[]) => {
+    if (answersList.length === 0) return 0;
+    const datesSet = new Set(answersList.map((a) => a.created_at.slice(0, 10)));
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterdayDate = new Date(Date.now() - 86400000);
+    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+
+    let checkDate: Date | null = null;
+    if (datesSet.has(todayStr)) {
+      checkDate = new Date();
+    } else if (datesSet.has(yesterdayStr)) {
+      checkDate = yesterdayDate;
+    } else {
+      return 0;
+    }
+
+    let streak = 0;
+    while (checkDate) {
+      const key = checkDate.toISOString().slice(0, 10);
+      if (datesSet.has(key)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+
+  const currentStreak = calculateStreak(answers);
 
   const handleRoleToggle = async () => {
     if (!user) return;
@@ -89,6 +149,11 @@ export default function HomePage() {
     window.location.reload();
   };
 
+  const handleSelectDate = (dateStr: string, dayAnswers: DBAnswer[]) => {
+    setSelectedDate(dateStr);
+    setSelectedDayAnswers(dayAnswers);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -101,10 +166,19 @@ export default function HomePage() {
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground px-6 py-12 relative transition-colors duration-300">
       {/* Header bar */}
-      <header className="w-full max-w-lg mx-auto flex items-center justify-between mb-12 border-b border-border pb-4">
+      <header className="w-full max-w-lg mx-auto flex items-center justify-between mb-8 border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-            <span className="text-xs font-bold text-primary-foreground font-serif">이음</span>
+          <div className="h-10 w-auto relative select-none shrink-0">
+            <img
+              src="/logo/lightmodenew.jpg"
+              alt="이음 로고"
+              className="h-full w-auto object-contain block dark:hidden"
+            />
+            <img
+              src="/logo/darkmodenew.jpg"
+              alt="이음 로고"
+              className="h-full w-auto object-contain hidden dark:block"
+            />
           </div>
           <div>
             <h2 className="text-base font-serif font-bold text-primary leading-tight">{user?.name}</h2>
@@ -135,32 +209,40 @@ export default function HomePage() {
       </header>
 
       {/* Main Home Dashboard Layout */}
-      <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center gap-10">
-        {/* Greetings Section */}
-        <div className="text-left border-l-2 border-primary/20 pl-4 py-1">
-          <span className="text-xs text-highlight font-serif font-bold tracking-widest uppercase block mb-1">매일의 서사</span>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground leading-relaxed animate-fade-in">
-            {user?.role === "self" ? (
-              <>
-                어서 오세요, 순자 님. <br />
-                오늘 되짚어볼 옛 기억의 지면입니다.
-              </>
-            ) : (
-              <>
-                반갑습니다, 지영 님. <br />
-                어머니의 흘러간 세월을 모아 기록해 주세요.
-              </>
-            )}
-          </h1>
+      <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center gap-8">
+        {/* Greetings & Streak Badge */}
+        <div className="flex items-start justify-between border-l-2 border-primary/20 pl-4 py-1">
+          <div className="text-left">
+            <span className="text-xs text-highlight font-serif font-bold tracking-widest uppercase block mb-1">매일의 서사</span>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground leading-relaxed animate-fade-in">
+              {user?.role === "self" ? (
+                <>
+                  어서 오세요, 순자 님. <br />
+                  오늘 되짚어볼 옛 기억의 지면입니다.
+                </>
+              ) : (
+                <>
+                  반갑습니다, 지영 님. <br />
+                  어머니의 흘러간 세월을 모아 기록해 주세요.
+                </>
+              )}
+            </h1>
+          </div>
+
+          {/* Streak Counter Badge */}
+          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-serif font-bold shadow-sm">
+            <Flame size={14} className="fill-orange-500 text-orange-500 animate-bounce" />
+            <span>{currentStreak}일 연속 회상 중</span>
+          </div>
         </div>
 
-        {/* Today's Question Card - Matte Stationery style */}
+        {/* 1. Today's Question Card - Matte Stationery style */}
         {todayQuestion ? (
           <div className="w-full p-8 rounded-2xl bg-secondary border border-border shadow-sm text-left relative transition-colors duration-300">
             {/* Tag badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/5 text-primary text-xs font-serif font-bold mb-6 border border-primary/10">
               <MessageSquarePlus size={12} />
-              오늘 적을 구절
+              오늘 적을 회상 구절
             </div>
 
             {/* Question Text */}
@@ -169,40 +251,84 @@ export default function HomePage() {
             </h3>
 
             {/* Primary Action Button */}
-            <div>
-              <button
-                onClick={() =>
-                  router.push(
-                    `/journal?qid=${todayQuestion.id}&qtext=${encodeURIComponent(
-                      todayQuestion.question_text
-                    )}`
-                  )
-                }
-                className="w-full py-3.5 text-lg font-serif font-bold bg-primary text-primary-foreground hover:opacity-90 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
-              >
-                기록하기
-              </button>
-            </div>
+            <button
+              onClick={() =>
+                router.push(
+                  `/journal?qid=${todayQuestion.id}&qtext=${encodeURIComponent(
+                    todayQuestion.question_text
+                  )}`
+                )
+              }
+              className="w-full py-3.5 text-lg font-serif font-bold bg-primary text-primary-foreground hover:opacity-90 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
+            >
+              기록하기
+            </button>
           </div>
         ) : (
           <div className="w-full p-8 rounded-2xl bg-secondary border border-border text-center">
-            <p className="text-muted-foreground font-serif">오늘 하루의 질문이 준비되어 있지 않습니다.</p>
+            <p className="text-muted-foreground font-serif">오늘 하루의 회상 질문이 준비되어 있습니다.</p>
           </div>
         )}
 
-        {/* Read Narratives Card - Matte book-cover link */}
-        <Link href="/narrative" className="w-full group">
-          <div className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer">
+        {/* 2. Daily Diary Container Card - Standalone Card */}
+        <div className="w-full p-7 rounded-2xl bg-background border border-border shadow-sm text-left relative flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-serif font-bold border border-amber-500/20">
+              <Sun size={13} className="text-amber-500" />
+              오늘의 소소한 일상 기록
+            </div>
+            {recentDiaries.length > 0 && (
+              <span className="text-[11px] text-muted-foreground font-serif">
+                최근 {recentDiaries.length}건 보관됨
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h4 className="text-lg font-serif font-bold text-foreground mb-1">
+              오늘 무슨 일이 있으셨나요?
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
+              오늘 산책, 통화, 소소한 감정을 자유롭게 적어주시면 AI가 수학적 빈도 확률 알고리즘으로 회상 질문을 다듬어 드립니다.
+            </p>
+          </div>
+
+          {/* Show recent diary preview if exists */}
+          {recentDiaries.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-muted/30 border border-border/80 text-xs font-serif text-foreground/90 italic truncate">
+              &ldquo;{recentDiaries[0].content}&rdquo;
+            </div>
+          )}
+
+          <button
+            onClick={() => router.push("/daily-diary")}
+            className="w-full py-3 text-sm font-serif font-bold bg-background hover:bg-muted/50 text-foreground border border-border rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+          >
+            <Edit3 size={15} className="text-primary" />
+            오늘 일상 일기 적기 ✦
+          </button>
+        </div>
+
+        {/* 3. Calendar Widget Section */}
+        <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
+
+        {/* 4. Menu Items Stack (Custom Topic + Read Narratives) */}
+        <div className="flex flex-col gap-3.5 w-full">
+          {/* Menu Item 1: Custom Topic Creation */}
+          <div
+            onClick={() => setIsCustomModalOpen(true)}
+            className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer group"
+          >
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
-                <BookOpen size={20} />
+              <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform duration-300">
+                <Sparkles size={20} />
               </div>
               <div className="text-left">
                 <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
-                  인생 나이테 연대기 보기
+                  {user?.role === "guardian" ? "어르신께 대화 주제 제안하기" : "직접 추억 주제 만들기"}
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1 font-sans">
-                  지면에 보관된 유년 시절의 회상 서사집
+                  사진이나 텍스트 힌트로 맞춤 회상 질문 다듬기
                 </p>
               </div>
             </div>
@@ -210,16 +336,70 @@ export default function HomePage() {
               &rarr;
             </span>
           </div>
-        </Link>
+
+          {/* Menu Item 2: Read Narratives */}
+          <Link href="/narrative" className="w-full group">
+            <div className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all duration-200 flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
+                  <BookOpen size={20} />
+                </div>
+                <div className="text-left">
+                  <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                    인생 나이테 연대기 보기
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1 font-sans">
+                    지면에 보관된 유년 시절의 회상 서사집
+                  </p>
+                </div>
+              </div>
+              <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
+                &rarr;
+              </span>
+            </div>
+          </Link>
+        </div>
       </main>
 
-      {/* Footer disclaimer */}
-      <footer className="w-full max-w-lg mx-auto text-center mt-16 pb-4">
+      <footer className="w-full max-w-lg mx-auto text-center mt-12 pb-4">
         <p className="text-[11px] text-zinc-400 font-serif leading-normal select-none">
           이음 서첩은 어르신의 평온한 두뇌 인지 자극과 추억 회고만을 돕는 서가입니다. <br />
           정신과 전문의나 의학적인 진찰 및 소견을 강요하지 않는 비상업적 공간입니다.
         </p>
       </footer>
+
+      {/* Completion Modal */}
+      <CompletionModal isOpen={showCompletionModal} onClose={handleCloseModal} />
+
+      {/* Day Detail Modal */}
+      {selectedDate && (
+        <DayDetailModal
+          isOpen={!!selectedDate}
+          dateStr={selectedDate}
+          answers={selectedDayAnswers}
+          onClose={() => setSelectedDate(null)}
+        />
+      )}
+
+      {/* Custom Topic Creation Modal */}
+      <CustomTopicModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        userId={user?.id || "user-elderly-123"}
+        creatorRole={user?.role || "self"}
+      />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-background text-foreground">
+        <Activity className="animate-spin text-primary mb-4" size={40} />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

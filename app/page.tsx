@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
+import { QuietFadeIn } from "@/components/QuietFadeIn";
 import { Sparkles, Share2, Heart, ArrowRight, ChevronDown } from "lucide-react";
 
 export default function EntryPage() {
   const [isMounted, setIsMounted] = useState(false);
   const section2Ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -17,25 +20,57 @@ export default function EntryPage() {
     section2Ref.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleStartDemo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined") {
+      const existingUser = localStorage.getItem("eeum_mock_curr_user");
+      if (!existingUser) {
+        const defaultUser = {
+          id: "user-elderly-123",
+          role: "self",
+          name: "김순자 어르신",
+          email: "soonja@eeum.com",
+          dob: "1945-03-10",
+          userCode: "UM-709",
+          textSize: "large",
+          colorVision: "default",
+          questionFrequency: "once",
+          appPurpose: "Memory Recording",
+          created_at: new Date().toISOString(),
+        };
+        localStorage.setItem("eeum_mock_curr_user", JSON.stringify(defaultUser));
+        window.dispatchEvent(new Event("eeum_user_changed"));
+      }
+    }
+    router.push("/home");
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground transition-colors duration-300 relative">
       {/* Floating Glassmorphism Navbar */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-5xl rounded-full px-6 py-3 flex items-center justify-between backdrop-blur-md bg-white/10 dark:bg-neutral-900/20 border border-white/15 dark:border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.15)] transition-all duration-300 hover:border-white/25 dark:hover:border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-inner">
-            <span className="text-xs font-serif font-bold text-primary-foreground">이음</span>
+          <div className="h-10 w-auto relative select-none shrink-0">
+            <img
+              src="/logo/lightmodenew.jpg"
+              alt="이음 로고"
+              className="h-full w-auto object-contain block dark:hidden"
+            />
+            <img
+              src="/logo/darkmodenew.jpg"
+              alt="이음 로고"
+              className="h-full w-auto object-contain hidden dark:block"
+            />
           </div>
-          <span className="text-sm md:text-base font-serif font-bold tracking-tight text-white select-none">
-            기억 회상 플랫폼
-          </span>
         </div>
         <div className="flex items-center gap-3">
           <ThemeSwitcher />
-          <Link href="/role-selection">
-            <button className="bg-white hover:bg-neutral-100 text-neutral-900 text-xs md:text-sm font-semibold px-4 py-2 rounded-full cursor-pointer transition-all duration-200 shadow-sm active:scale-95">
-              기록 시작하기
-            </button>
-          </Link>
+          <button
+            onClick={handleStartDemo}
+            className="bg-white hover:bg-neutral-100 text-neutral-900 text-xs md:text-sm font-semibold px-4 py-2 rounded-full cursor-pointer transition-all duration-200 shadow-sm active:scale-95"
+          >
+            기록 시작하기
+          </button>
         </div>
       </header>
 
@@ -54,11 +89,12 @@ export default function EntryPage() {
         {/* 60% Opacity Dark Overlay */}
         <div className="absolute inset-0 bg-black/60 pointer-events-none z-0" />
 
-        {/* Hero Content (Asymmetric bottom-left placement) */}
-        <div
-          className={`relative z-10 w-full max-w-5xl mx-auto px-6 md:px-12 pb-16 md:pb-24 flex flex-col items-start text-left text-white transition-all duration-1000 ease-out transform ${
-            isMounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+        {/* Hero Content (Asymmetric bottom-left placement) with senior-friendly anime.js transition */}
+        <QuietFadeIn
+          delay={200}
+          duration={800}
+          yOffset={12}
+          className="relative z-10 w-full max-w-5xl mx-auto px-6 md:px-12 pb-16 md:pb-24 flex flex-col items-start text-left text-white"
         >
           <span className="text-xs sm:text-sm uppercase tracking-widest font-bold text-highlight font-serif mb-3 opacity-90">
             비약물적 기억 관리 & 세대 연계
@@ -71,20 +107,20 @@ export default function EntryPage() {
             부모님의 오래된 손글씨 일기, 한 장의 옛 편지, 흐릿해진 사진들을 고요히 한 지면에 옮겨 적습니다. 인공지능이 건네는 다정한 질문들은 어르신의 소중한 과거 기억을 자극하고, 자녀의 기억 조각과 만나 하나의 마인드맵으로 엮입니다.
           </p>
           <div className="mt-6 flex flex-wrap gap-4">
-            <Link href="/role-selection">
-              <button className="bg-primary hover:opacity-90 text-primary-foreground font-bold px-6 py-3 rounded-full cursor-pointer flex items-center gap-2 text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-primary/20 active:scale-98">
-                기록 시작하기
-                <ArrowRight size={18} />
-              </button>
-            </Link>
+            <button
+              onClick={handleStartDemo}
+              className="bg-primary hover:opacity-90 text-primary-foreground font-bold px-6 py-3 rounded-full cursor-pointer flex items-center gap-2 text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-primary/20 active:scale-98"
+            >
+              기록 시작하기
+              <ArrowRight size={18} />
+            </button>
           </div>
-        </div>
+        </QuietFadeIn>
 
         {/* Animated "Scroll Down" Indicator */}
         <div
-          className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 text-xs tracking-widest uppercase transition-opacity duration-1000 delay-500 cursor-pointer hover:text-white/80 ${
-            isMounted ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 text-xs tracking-widest uppercase transition-opacity duration-1000 delay-500 cursor-pointer hover:text-white/80 ${isMounted ? "opacity-100" : "opacity-0"
+            }`}
           onClick={scrollToSection2}
         >
           <span>Scroll Down</span>
@@ -160,7 +196,7 @@ export default function EntryPage() {
                 <circle cx="150" cy="150" r="80" fill="none" className="pen-line" strokeWidth="0.8" strokeDasharray="2 2" />
                 <circle cx="150" cy="150" r="50" fill="none" className="pen-line" strokeWidth="0.8" strokeDasharray="2 2" />
                 <circle cx="150" cy="150" r="20" fill="none" className="pen-line" strokeWidth="0.8" />
-                
+
                 <circle cx="150" cy="150" r="3" className="fill-primary" />
 
                 <line x1="150" y1="150" x2="150" y2="40" className="stroke-primary" strokeWidth="0.5" opacity="0.3" />

@@ -18,18 +18,18 @@
 
 /* Dark mode overrides (applied when .dark class is on html) */
 .dark {
-  --background: #121110; /* Dark matte background */
-  --foreground: #F4F0E8; /* Soft warm cream text */
-  --primary: #A8A299; /* Muted clay gray accent */
-  --primary-foreground: #121110; /* Dark text inside gray buttons */
-  --secondary: #1E1C1A; /* Dark secondary surface */
-  --secondary-foreground: #F4F0E8;
-  --muted: #1E1C1A;
-  --muted-foreground: #8C8880;
-  --card: #121110;
-  --card-foreground: #F4F0E8;
-  --border: rgba(168, 162, 153, 0.2); /* Thin gray tinted borders */
-  --highlight: #C2955A; /* Warm golden highlight */
+  --background: #1D1C1A; /* Warm matte charcoal brown */
+  --foreground: #F4EFE6; /* Warm hanji-cream text */
+  --primary: #D8B48F; /* Soft bronze/gold accent */
+  --primary-foreground: #1D1C1A; /* Dark text inside gold buttons */
+  --secondary: #262421; /* Warm dark secondary surface */
+  --secondary-foreground: #F4EFE6;
+  --muted: #262421;
+  --muted-foreground: #9E9A90; /* Readable warm gray */
+  --card: #1D1C1A;
+  --card-foreground: #F4EFE6;
+  --border: rgba(216, 180, 143, 0.25); /* Gold-tinted subtle border */
+  --highlight: #E2B37A; /* Cozy golden highlight */
 }
 
 /* Accessibility Sizing Options */
@@ -84,7 +84,7 @@ html.color-vision-daltonism {
 }
 html.dark.color-vision-daltonism {
   --primary: #99aab8;
-  --secondary: #1a1c1e;
+  --secondary: #222528;
   --highlight: #c27d5a;
 }
 
@@ -96,7 +96,7 @@ html.color-vision-tritanopia {
 }
 html.dark.color-vision-tritanopia {
   --primary: #b8999a;
-  --secondary: #1e1a1a;
+  --secondary: #272222;
   --highlight: #5ac299;
 }
 
