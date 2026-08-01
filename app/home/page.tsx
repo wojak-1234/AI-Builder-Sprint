@@ -251,13 +251,7 @@ function HomeContent() {
 
             {/* Primary Action Button */}
             <button
-              onClick={() =>
-                router.push(
-                  `/journal?qid=${todayQuestion.id}&qtext=${encodeURIComponent(
-                    todayQuestion.question_text
-                  )}`
-                )
-              }
+              onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
               className="w-full py-3.5 text-lg font-serif font-bold bg-primary text-primary-foreground hover:opacity-90 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer"
             >
               기록하기

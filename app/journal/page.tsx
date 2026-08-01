@@ -15,25 +15,12 @@ import { ArrowLeft, Mic, Keyboard, Image as ImageIcon, Sparkles, AlertCircle, Re
 function JournalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // Safely decode and sanitize query parameters to prevent XSS & broken characters
-  const rawQid = searchParams.get("qid") || "";
-  const rawQtext = searchParams.get("qtext") || "";
-  
-  const qid = rawQid.replace(/[^a-zA-Z0-9\-_]/g, "").trim();
-  
-  let qtext = "오늘의 소중한 추억을 들려주세요.";
-  if (rawQtext) {
-    try {
-      // Decode URI component (e.g. asdf%3F -> asdf?)
-      const decoded = decodeURIComponent(rawQtext);
-      // XSS Sanitization: Strip dangerous script & HTML tags
-      qtext = decoded.replace(/<[^>]*>?/gm, "").trim();
-    } catch {
-      qtext = rawQtext.replace(/<[^>]*>?/gm, "").trim();
-    }
-  }
 
+  // Safely extract and sanitize qid parameter to prevent SQLi & injection
+  const rawQid = searchParams.get("qid") || "";
+  const qid = rawQid.replace(/[^a-zA-Z0-9\-_]/g, "").trim();
+
+  const [questionText, setQuestionText] = useState<string>("오늘 하루의 소중한 추억을 들려주세요.");
   const [user, setUser] = useState<DBUser | null>(null);
   const [answerType, setAnswerType] = useState<"text" | "voice" | "ocr" | null>(null);
 
@@ -63,10 +50,9 @@ function JournalContent() {
   const [safetyError, setSafetyError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadInitialData() {
       let curr = await supabaseService.getCurrentUser();
       if (!curr) {
-        // Fallback default user for immediate journaling demo
         curr = {
           id: "user-elderly-123",
           role: "self",
@@ -76,8 +62,23 @@ function JournalContent() {
         await supabaseService.setCurrentUser(curr);
       }
       setUser(curr);
+
+      // Secure Question Lookup from DB via qid
+      if (qid) {
+        const foundQ = await supabaseService.getQuestionById(qid);
+        if (foundQ && foundQ.question_text) {
+          setQuestionText(foundQ.question_text);
+        } else {
+          // If qid not found, fetch active pending question or default
+          const questions = await supabaseService.getQuestions(curr.id);
+          const pending = questions.find((q) => q.status === "pending");
+          if (pending) {
+            setQuestionText(pending.question_text);
+          }
+        }
+      }
     }
-    loadUser();
+    loadInitialData();
 
     // Initialize Web Speech API
     if (typeof window !== "undefined") {
@@ -234,7 +235,7 @@ function JournalContent() {
         id: `a-${Date.now()}`,
         user_id: activeUser.id,
         question_id: qid || "q-default",
-        question_text: qtext || "소중한 회상 기록",
+        question_text: questionText || "소중한 회상 기록",
         answer_text: verifiedText,
         created_at: new Date().toISOString(),
         event_date: "1960-01-01",
@@ -312,7 +313,7 @@ function JournalContent() {
         <div className="p-6 rounded-2xl bg-secondary border border-border select-text">
           <span className="text-[10px] text-highlight font-serif font-bold tracking-wider block mb-2 select-none">이전 서화 질문</span>
           <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground leading-loose">
-            &ldquo;{qtext}&rdquo;
+            &ldquo;{questionText}&rdquo;
           </h2>
         </div>
 

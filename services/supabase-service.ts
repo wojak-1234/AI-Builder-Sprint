@@ -339,6 +339,26 @@ export const supabaseService = {
     await client.from("questions_history").insert(question);
   },
 
+  getQuestionById: async (questionId: string): Promise<DBQuestionHistory | null> => {
+    if (!questionId) return null;
+    if (isMockMode()) {
+      const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+      return questions.find((q) => q.id === questionId) || null;
+    }
+    try {
+      const client = getSupabaseClient()!;
+      const { data } = await client
+        .from("questions_history")
+        .select("*")
+        .eq("id", questionId)
+        .single();
+      return (data as DBQuestionHistory) || null;
+    } catch {
+      const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+      return questions.find((q) => q.id === questionId) || null;
+    }
+  },
+
   updateQuestionStatus: async (questionId: string, status: "pending" | "answered"): Promise<void> => {
     if (isMockMode()) {
       const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
