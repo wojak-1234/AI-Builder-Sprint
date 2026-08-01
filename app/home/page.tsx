@@ -22,7 +22,6 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [isDailyDiaryModalOpen, setIsDailyDiaryModalOpen] = useState(false);
 
   // Calendar Selection Modal state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
