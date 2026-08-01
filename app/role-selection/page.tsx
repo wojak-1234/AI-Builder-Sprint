@@ -23,7 +23,7 @@ export default function RoleSelectionPage() {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-70 dark:opacity-50 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-cover opacity-100 dark:opacity-100 transition-opacity duration-300"
           src="/videos/8087608-uhd_2160_4096_24fps.mp4"
         />
         {/* Soft natural lighting backdrop overlay to match cream / dark paper theme */}
