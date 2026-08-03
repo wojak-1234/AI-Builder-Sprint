@@ -149,9 +149,9 @@ export default function AlbumClient() {
           }
         }
 
-        // Add real answers with media photos
+        // Add real answers with media photos (only if actual media_url exists — no fallback default image)
         for (const a of answers) {
-          if (a.media_url || a.answer_text.includes("사진")) {
+          if (a.media_url) {
             const titleAndAnswer = `${a.question_text || ""} ${a.answer_text || ""}`;
             const tags = await extractAiTags(titleAndAnswer, ["옛사진", a.by_guardian ? "보호자대리" : "본인기록"]);
             fetchedItems.push({
@@ -159,7 +159,7 @@ export default function AlbumClient() {
               type: "ocr",
               title: a.question_text,
               answerText: a.answer_text,
-              imageUrl: a.media_url || "/testdata/ocrtest1.jpg",
+              imageUrl: a.media_url,
               date: a.created_at.substring(0, 10),
               byGuardian: a.by_guardian,
               tags,
