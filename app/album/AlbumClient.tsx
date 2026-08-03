@@ -241,7 +241,7 @@ export default function AlbumClient() {
           📸 추억 사진첩 (사진별 회상 이야기)
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-serif leading-relaxed">
-          빛바랜 옛 앨범 사진과 편지 속에 담긴 소중한 이야기들을 한자리에서 느껴보세요. 사진을 터치하면 당시의 생생한 답변 수필이 펼쳐집니다.
+          사진을 터치하면 그 안에 담긴 이야기가 펼쳐집니다.
         </p>
       </div>
 

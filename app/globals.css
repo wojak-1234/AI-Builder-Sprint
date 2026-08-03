@@ -99,11 +99,19 @@ html.color-vision-daltonism {
   --primary: #3b526e; /* Muted blue instead of reddish clay */
   --secondary: #e6f2fc; /* Soft sky blue instead of soft green */
   --highlight: #ad6d50; /* Reddish brown instead of golden ochre */
+  --destructive: #7a3b8a; /* Purple instead of red, stays clear of the red/green axis */
+  --destructive-foreground: #FAF8F5;
+  --success: #2f6f5e; /* Deep teal, distinguished from highlight by lightness+coolness, not hue alone */
+  --success-foreground: #FAF8F5;
 }
 html.dark.color-vision-daltonism {
   --primary: #99aab8;
   --secondary: #222528;
   --highlight: #c27d5a;
+  --destructive: #c48fd6;
+  --destructive-foreground: #1D1C1A;
+  --success: #4fa98f;
+  --success-foreground: #1D1C1A;
 }
 
 /* Accessibility Color Vision: Tritanopia (Blue-Yellow Color Blindness) */
@@ -111,11 +119,19 @@ html.color-vision-tritanopia {
   --primary: #6e3b3e; /* Warm red instead of clay brown */
   --secondary: #fce6e7; /* Soft pink instead of green */
   --highlight: #50ad88; /* Blue-green instead of golden ochre */
+  --destructive: #b3462e; /* Red-orange stays safe: tritanopia preserves the red/green axis */
+  --destructive-foreground: #FAF8F5;
+  --success: #2d6b3e; /* Darker, warmer forest green — distinguished from highlight by lightness, not the blue/yellow axis */
+  --success-foreground: #FAF8F5;
 }
 html.dark.color-vision-tritanopia {
   --primary: #b8999a;
   --secondary: #272222;
   --highlight: #5ac299;
+  --destructive: #d9846a;
+  --destructive-foreground: #1D1C1A;
+  --success: #6fbf6f;
+  --success-foreground: #1D1C1A;
 }
 
 @theme inline {

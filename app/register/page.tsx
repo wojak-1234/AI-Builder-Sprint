@@ -185,7 +185,7 @@ function RegisterContent() {
         ) : (
           <div className="text-white/70 font-serif text-xs select-none">이음 서실</div>
         )}
-        
+
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
           {mode === "register-steps" && (
@@ -198,7 +198,7 @@ function RegisterContent() {
 
       {/* Main Container */}
       <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center my-8 z-10">
-        
+
         {/* MODE 1: ENTRY SCREEN (Choice between Login and Signup) */}
         {mode === "entry" && (
           <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-center flex flex-col items-center gap-6">
@@ -215,10 +215,10 @@ function RegisterContent() {
               />
             </div>
             <div>
-              <h1 className="text-3xl font-serif font-bold text-primary">이음에 오신 것을 환영합니다</h1>
-              <p className="text-sm text-muted-foreground mt-2 font-serif">부모님의 기억과 자녀의 마음을 잇는 공간</p>
+              <h1 className="text-3xl font-serif font-bold text-primary">기억이 이어지는 공간</h1>
+              <p className="text-sm text-muted-foreground mt-2 font-serif">소중한 기억이 잊히지 않기를</p>
             </div>
-            
+
             <div className="flex flex-col gap-3.5 w-full mt-4">
               <Button variant="primary" onClick={() => setMode("role-select")} className="w-full flex items-center justify-center gap-2">
                 새 기록첩 시작하기 (회원가입)
@@ -342,7 +342,7 @@ function RegisterContent() {
         {/* MODE 4: STEP WIZARD */}
         {mode === "register-steps" && (
           <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-left">
-            
+
             {/* STEP 1: 기본 정보 입력 */}
             {step === 1 && (
               <div className="flex flex-col gap-5">
@@ -437,11 +437,10 @@ function RegisterContent() {
                       <button
                         key={sz}
                         onClick={() => setTextSize(sz)}
-                        className={`py-2 px-1 text-xs rounded-lg border text-center font-serif transition-all cursor-pointer ${
-                          textSize === sz
-                            ? "bg-primary text-primary-foreground border-primary font-bold"
-                            : "bg-background text-foreground border-border hover:bg-muted"
-                        }`}
+                        className={`py-2 px-1 text-xs rounded-lg border text-center font-serif transition-all cursor-pointer ${textSize === sz
+                          ? "bg-primary text-primary-foreground border-primary font-bold"
+                          : "bg-background text-foreground border-border hover:bg-muted"
+                          }`}
                       >
                         {sz === "small" && "작게 (S)"}
                         {sz === "medium" && "보통 (M)"}
@@ -464,11 +463,10 @@ function RegisterContent() {
                       <button
                         key={v.key}
                         onClick={() => setColorVision(v.key as any)}
-                        className={`p-3 text-xs rounded-xl border text-left font-serif transition-all cursor-pointer ${
-                          colorVision === v.key
-                            ? "bg-primary text-primary-foreground border-primary font-bold"
-                            : "bg-background text-foreground border-border hover:bg-muted"
-                        }`}
+                        className={`p-3 text-xs rounded-xl border text-left font-serif transition-all cursor-pointer ${colorVision === v.key
+                          ? "bg-primary text-primary-foreground border-primary font-bold"
+                          : "bg-background text-foreground border-border hover:bg-muted"
+                          }`}
                       >
                         {v.label}
                       </button>
@@ -491,11 +489,10 @@ function RegisterContent() {
                     <button
                       key={freq}
                       onClick={() => setQuestionFrequency(freq)}
-                      className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                        questionFrequency === freq
-                          ? "bg-primary text-primary-foreground border-primary font-bold"
-                          : "bg-background text-foreground border-border hover:bg-muted"
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${questionFrequency === freq
+                        ? "bg-primary text-primary-foreground border-primary font-bold"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                        }`}
                     >
                       <span className="font-serif text-sm">
                         {freq === "once" && "하루에 한 번 (추천)"}
@@ -504,9 +501,8 @@ function RegisterContent() {
                         {freq === "custom" && "맞춤형 일정"}
                       </span>
                       <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          questionFrequency === freq ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
-                        }`}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${questionFrequency === freq ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
+                          }`}
                       >
                         {questionFrequency === freq && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                       </div>
@@ -526,17 +522,15 @@ function RegisterContent() {
                 <div className="flex border-b border-border">
                   <button
                     onClick={() => setLinkMethod("code")}
-                    className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${
-                      linkMethod === "code" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
-                    }`}
+                    className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${linkMethod === "code" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
+                      }`}
                   >
                     기록코드 입력
                   </button>
                   <button
                     onClick={() => setLinkMethod("qr")}
-                    className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${
-                      linkMethod === "qr" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
-                    }`}
+                    className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${linkMethod === "qr" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
+                      }`}
                   >
                     QR 코드 스캔
                   </button>
@@ -604,16 +598,14 @@ function RegisterContent() {
                     <button
                       key={purpose.key}
                       onClick={() => setAppPurpose(purpose.key)}
-                      className={`flex items-start gap-4 p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                        appPurpose === purpose.key
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:bg-muted"
-                      }`}
+                      className={`flex items-start gap-4 p-4 rounded-xl border transition-all text-left cursor-pointer ${appPurpose === purpose.key
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                        }`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
-                          appPurpose === purpose.key ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
-                        }`}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${appPurpose === purpose.key ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
+                          }`}
                       >
                         {appPurpose === purpose.key && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                       </div>
@@ -641,11 +633,10 @@ function RegisterContent() {
                     <button
                       key={freq}
                       onClick={() => setSharedQuestionFrequency(freq)}
-                      className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                        sharedQuestionFrequency === freq
-                          ? "bg-primary text-primary-foreground border-primary font-bold"
-                          : "bg-background text-foreground border-border hover:bg-muted"
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${sharedQuestionFrequency === freq
+                        ? "bg-primary text-primary-foreground border-primary font-bold"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                        }`}
                     >
                       <span className="font-serif text-sm">
                         {freq === "once" && "하루에 한 번 (추천)"}
@@ -654,9 +645,8 @@ function RegisterContent() {
                         {freq === "custom" && "맞춤 일정 설정"}
                       </span>
                       <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          sharedQuestionFrequency === freq ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
-                        }`}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${sharedQuestionFrequency === freq ? "border-primary-foreground bg-primary-foreground text-primary" : "border-border"
+                          }`}
                       >
                         {sharedQuestionFrequency === freq && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                       </div>
@@ -685,7 +675,7 @@ function RegisterContent() {
             </Button>
           )
         )}
-        
+
         {errors.register && (
           <p className="text-xs text-destructive font-serif text-center mt-2 animate-pulse">
             {errors.register}

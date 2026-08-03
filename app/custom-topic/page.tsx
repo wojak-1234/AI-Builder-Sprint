@@ -345,7 +345,7 @@ export default function CustomTopicPage() {
                   &ldquo;{todayProposedQuestion}&rdquo;
                 </h3>
                 <p className="text-xs text-amber-800/80 dark:text-amber-300/80 font-serif leading-normal mt-1">
-                  제안하신 대화 주제는 어르신 서랍 홈 지면에 안전하게 노출되어 있으며, 언제든지 질문 문구를 수정하거나 다듬으실 수 있습니다.
+                  제안하신 주제는 어르신 홈 화면에 표시되며, 언제든 문구를 수정할 수 있습니다.
                 </p>
               </div>
 

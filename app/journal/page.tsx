@@ -620,7 +620,7 @@ function JournalContent() {
                               <AlertCircle size={18} className="shrink-0 mt-0.5" />
                               <div className="text-xs leading-relaxed text-left">
                                 <p className="font-serif font-bold">지면 판독에 다소 어려움이 있습니다</p>
-                                <p className="mt-0.5">글씨가 어둡거나 뭉개져 있어 정확하지 않을 수 있으니, 아래 대화 상자에서 눈길을 짚어가며 직접 수정을 부탁드립니다.</p>
+                                <p className="mt-0.5">아래 상자에서 틀린 부분을 직접 고쳐주세요.</p>
                               </div>
                             </div>
                           )}
