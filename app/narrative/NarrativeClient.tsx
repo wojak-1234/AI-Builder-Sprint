@@ -47,6 +47,9 @@ export default function NarrativeClient({
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isTagOpen, setIsTagOpen] = useState(false);
 
+  // Lightbox state for full-screen image view
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
   // Load answers and daily diaries for categorized card display
   const loadData = async () => {
     try {
@@ -260,7 +263,7 @@ export default function NarrativeClient({
       cardEntities,
       elderlyAnswerText: elderlyAns?.answer_text,
       guardianAnswerText: guardianAns?.answer_text,
-      photoUrl: undefined as string | undefined,
+      photoUrl: elderlyAns?.media_url || guardianAns?.media_url || undefined as string | undefined,
       date: firstAns.created_at.substring(0, 10),
       byGuardian: firstAns.by_guardian,
       isShared,
@@ -392,7 +395,7 @@ export default function NarrativeClient({
           {user?.role === "guardian" ? "어르신의 3단 카테고리 추억 보관함" : "소중한 회상 서첩 (3단 컬럼)"}
         </h1>
         <p className="text-xs text-muted-foreground mt-1 font-serif leading-relaxed">
-          1열(대분류 카테고리) → 2열(세부 태그 & 등장 빈도) → 3열(추억 카드) 구조로 정돈된 회상 서첩입니다.
+          카테고리 → 태그 → 추억 카드 순서로 정돈된 3단 회상 서첩입니다.
         </p>
       </div>
 
@@ -660,10 +663,17 @@ export default function NarrativeClient({
                       &ldquo;{card.title}&rdquo;
                     </h3>
 
-                    {/* Photo if exists */}
+                    {/* Photo if exists — click to open full-screen lightbox */}
                     {card.photoUrl && (
-                      <div className="rounded-2xl overflow-hidden max-h-60 border border-border my-1 shadow-2xs">
-                        <img src={card.photoUrl} alt="Diary attachment" className="w-full h-full object-cover" />
+                      <div
+                        className="rounded-2xl overflow-hidden max-h-60 border border-border my-1 shadow-2xs cursor-zoom-in relative group"
+                        onClick={() => setLightboxSrc(card.photoUrl!)}
+                        title="클릭하면 전체 화면으로 볼 수 있어요"
+                      >
+                        <img src={card.photoUrl} alt="Diary attachment" className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-serif font-bold bg-black/50 px-3 py-1 rounded-full">전체 보기</span>
+                        </div>
                       </div>
                     )}
 
@@ -705,6 +715,29 @@ export default function NarrativeClient({
         </section>
 
       </main>
+
+      {/* Lightbox: full-screen image overlay */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+            aria-label="닫기"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="전체 화면 추억 사진"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl select-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-white/50 font-serif pointer-events-none">화면을 클릭하면 닫혀요</p>
+        </div>
+      )}
     </div>
   );
 }
