@@ -69,10 +69,19 @@ function HomeContent() {
         const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
         setRecentDiaries(diaries);
 
-        // Fetch dynamic personalized daily diary prompt
-        const dPrompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
-        if (dPrompt) {
-          setDailyDiaryPrompt(dPrompt);
+        // Fetch dynamic personalized daily diary prompt — cached once per elder per virtual
+        // day so the topic doesn't change every time /home or /daily-diary is (re)entered.
+        // ("다른 주제 보기" on /daily-diary is the intentional escape hatch that regenerates.)
+        const diaryPromptCacheKey = `eeum_daily_diary_prompt_${elderlyId}_${supabaseService.getVirtualTodayString()}`;
+        const cachedDiaryPrompt = localStorage.getItem(diaryPromptCacheKey);
+        if (cachedDiaryPrompt) {
+          setDailyDiaryPrompt(cachedDiaryPrompt);
+        } else {
+          const dPrompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
+          if (dPrompt) {
+            setDailyDiaryPrompt(dPrompt);
+            localStorage.setItem(diaryPromptCacheKey, dPrompt);
+          }
         }
 
         // 1. Fetch Daily Mission Question (questions_history) using Virtual Today String

@@ -8,6 +8,19 @@
 
 어르신의 오래된 손글씨 일기, 편지, 빛바랜 사진을 AI가 다정한 질문으로 되살리고, 그 답변을 자녀(보호자)의 기억과 하나의 서사로 엮어주는 비약물적 인지 자극 서비스입니다.
 
+<p align="center">
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16" /></a>
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=20232A" alt="React 19" /></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" /></a>
+</p>
+<p align="center">
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
+  <a href="https://www.upstage.ai"><img src="https://img.shields.io/badge/Upstage_Solar_Pro-7C3AED?style=for-the-badge" alt="Upstage Solar Pro" /></a>
+  <a href="https://ai.google.dev"><img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini" /></a>
+  <a href="https://web.dev/progressive-web-apps"><img src="https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" /></a>
+</p>
+
 > 본 서비스는 비약물적 회상 인지 자극을 목적으로 설계되었으며, 정신과적·의학적 진단이나 임상 진료를 대체하지 않습니다. 이 원칙은 서비스 UX뿐 아니라 AI 프롬프트 설계와 안전 검수 로직 전체를 관통하는 핵심 제약 조건입니다.
 
 ---
@@ -79,6 +92,20 @@
 ---
 
 ## 기술 스택
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=20232A" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
+  <br/>
+  <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase" />
+  <img src="https://img.shields.io/badge/Upstage_Solar_Pro-7C3AED?style=flat-square" alt="Upstage Solar Pro" />
+  <img src="https://img.shields.io/badge/Upstage_Document_Parse-7C3AED?style=flat-square" alt="Upstage Document Parse" />
+  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/Web_Speech_API-4285F4?style=flat-square" alt="Web Speech API" />
+  <img src="https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
+</p>
 
 | 영역 | 기술 |
 | :--- | :--- |

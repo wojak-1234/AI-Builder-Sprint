@@ -61,11 +61,20 @@ export default function DailyDiaryPage() {
         setAnswerType(null);
       }
 
-      // Fetch dynamic personalized prompt using LLM
+      // Fetch dynamic personalized prompt using LLM — cached once per elder per virtual day so
+      // re-entering this page doesn't silently swap the topic (handleRefreshPrompt below is the
+      // intentional "다른 주제 보기" escape hatch that regenerates and re-caches).
       const allAnswers = await supabaseService.getAnswers(elderlyId);
-      const prompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
-      if (prompt) {
-        setDynamicPrompt(prompt);
+      const diaryPromptCacheKey = `eeum_daily_diary_prompt_${elderlyId}_${virtualTodayStr}`;
+      const cachedPrompt = localStorage.getItem(diaryPromptCacheKey);
+      if (cachedPrompt) {
+        setDynamicPrompt(cachedPrompt);
+      } else {
+        const prompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
+        if (prompt) {
+          setDynamicPrompt(prompt);
+          localStorage.setItem(diaryPromptCacheKey, prompt);
+        }
       }
     }
     initUser();
@@ -214,7 +223,13 @@ export default function DailyDiaryPage() {
       const allAnswers = await supabaseService.getAnswers(elderlyId);
       const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
       const newPrompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
-      if (newPrompt) setDynamicPrompt(newPrompt);
+      if (newPrompt) {
+        setDynamicPrompt(newPrompt);
+        // Persist the manually-picked topic as today's cached prompt so it sticks
+        // until the user asks for another one again or a new day starts.
+        const virtualTodayStr = supabaseService.getVirtualTodayString();
+        localStorage.setItem(`eeum_daily_diary_prompt_${elderlyId}_${virtualTodayStr}`, newPrompt);
+      }
     } catch (e) {
       console.error("Failed to refresh prompt", e);
     } finally {
