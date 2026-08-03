@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseService } from "@/services/supabase-service";
 import { analyzeMindmap } from "@/lib/analytics/mindmap-analyzer";
+import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,12 +11,10 @@ export async function GET(req: NextRequest) {
     const narratives = await supabaseService.getNarratives(userId);
     const answers = await supabaseService.getAnswers(userId);
 
-    const mockEntities = answers.flatMap((a) => [
-      { type: "place" as const, value: "마당", sourceAnswerId: a.id },
-      { type: "person" as const, value: "이지영", sourceAnswerId: a.id },
-    ]);
+    // Dynamically extract real entities from user answers using Agent 1 (ocrExtractorAgent)
+    const extractedEntities = await ocrExtractorAgent.extractFromAnswers(answers);
 
-    const analytics = analyzeMindmap(mockEntities, answers, narratives);
+    const analytics = analyzeMindmap(extractedEntities, answers, narratives);
 
     return NextResponse.json({
       success: true,

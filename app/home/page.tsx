@@ -9,15 +9,17 @@ import CalendarWidget from "@/components/CalendarWidget";
 import DayDetailModal from "@/components/DayDetailModal";
 import { supabaseService, DBUser, DBQuestionHistory, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
-import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun, Check } from "lucide-react";
+import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun, Check, FastForward } from "lucide-react";
 
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<DBUser | null>(null);
   const [todayQuestion, setTodayQuestion] = useState<DBQuestionHistory | null>(null);
+  const [customProposedQuestions, setCustomProposedQuestions] = useState<DBQuestionHistory[]>([]);
   const [answers, setAnswers] = useState<DBAnswer[]>([]);
   const [recentDiaries, setRecentDiaries] = useState<DBDailyDiary[]>([]);
+  const [dailyDiaryPrompt, setDailyDiaryPrompt] = useState<string>("오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?");
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
@@ -64,26 +66,49 @@ function HomeContent() {
         const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
         setRecentDiaries(diaries);
 
-        // Fetch questions
-        const questions = await supabaseService.getQuestions(elderlyId);
-        let pendingQ = questions.find((q) => q.status === "pending");
+        // Fetch dynamic personalized daily diary prompt
+        const dPrompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
+        if (dPrompt) {
+          setDailyDiaryPrompt(dPrompt);
+        }
 
-        if (!pendingQ) {
+        // 1. Fetch Daily Mission Question (questions_history) using Virtual Today String
+        const questions = await supabaseService.getQuestions(elderlyId);
+        const virtualTodayStr = supabaseService.getVirtualTodayString();
+
+        // Rule: A NEW daily reminiscence question MUST be generated & set for EVERY DAY
+        // Find question created specifically on virtualTodayStr
+        let todayQ = questions.find((q) => {
+          const qDate = toLocalDateString(q.created_at);
+          const isCustom = q.id.startsWith("q-custom-") || q.created_by;
+          return qDate === virtualTodayStr && !isCustom;
+        });
+
+        // If no question exists specifically for virtualTodayStr, ALWAYS generate a fresh new curated question!
+        if (!todayQ) {
           const newQs = await questionGeneratorAgent.generateQuestions([], allAnswers, true);
           if (newQs.questions && newQs.questions.length > 0) {
-            pendingQ = {
+            const offsetDays = supabaseService.getVirtualDateOffset();
+            const virtualNow = new Date(Date.now() + offsetDays * 86400000).toISOString();
+
+            const autoQ: DBQuestionHistory = {
               id: `q-${Date.now()}`,
               user_id: elderlyId,
               question_text: newQs.questions[0],
-              created_at: new Date().toISOString(),
+              created_at: virtualNow,
               status: "pending",
               shared: true
             };
-            await supabaseService.addQuestion(pendingQ);
+            await supabaseService.addQuestion(autoQ);
+            todayQ = autoQ;
           }
         }
 
-        setTodayQuestion(pendingQ || null);
+        setTodayQuestion(todayQ || null);
+
+        // 2. Fetch Custom Proposed Questions from dedicated table (custom_proposed_questions)
+        const customProposed = await supabaseService.getCustomProposedQuestions(elderlyId);
+        setCustomProposedQuestions(customProposed);
       } catch (err) {
         console.error("Error loading home data:", err);
       } finally {
@@ -94,14 +119,36 @@ function HomeContent() {
     loadData();
   }, []);
 
-  // Calculate Streak (Consecutive active days)
-  const calculateStreak = (answersList: DBAnswer[]) => {
-    if (answersList.length === 0) return 0;
-    const datesSet = new Set(answersList.map((a) => a.created_at.slice(0, 10)));
+  // Helper function to convert ISO string or Date into local YYYY-MM-DD
+  const toLocalDateString = (isoOrDateStr?: string | Date): string => {
+    if (!isoOrDateStr) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+    const dateObj = typeof isoOrDateStr === "string" ? new Date(isoOrDateStr) : isoOrDateStr;
+    if (isNaN(dateObj.getTime())) {
+      return String(isoOrDateStr).slice(0, 10);
+    }
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const d = String(dateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+  // Calculate Streak (Consecutive active days)
+  const calculateStreak = (answersList: DBAnswer[], diariesList: DBDailyDiary[]) => {
+    const datesSet = new Set<string>();
+    answersList.forEach((a) => datesSet.add(toLocalDateString(a.created_at)));
+    diariesList.forEach((d) => datesSet.add(toLocalDateString(d.created_at)));
+
+    if (datesSet.size === 0) return 0;
+
+    const todayStr = toLocalDateString(new Date());
     const yesterdayDate = new Date(Date.now() - 86400000);
-    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+    const yesterdayStr = toLocalDateString(yesterdayDate);
 
     let checkDate: Date | null = null;
     if (datesSet.has(todayStr)) {
@@ -114,7 +161,7 @@ function HomeContent() {
 
     let streak = 0;
     while (checkDate) {
-      const key = checkDate.toISOString().slice(0, 10);
+      const key = toLocalDateString(checkDate);
       if (datesSet.has(key)) {
         streak++;
         checkDate.setDate(checkDate.getDate() - 1);
@@ -125,7 +172,7 @@ function HomeContent() {
     return streak;
   };
 
-  const currentStreak = calculateStreak(answers);
+  const currentStreak = calculateStreak(answers, recentDiaries);
 
   const handleRoleToggle = async () => {
     const currentRole = user?.role || "self";
@@ -144,6 +191,13 @@ function HomeContent() {
 
   const handleResetData = () => {
     supabaseService.resetMockData();
+    window.location.reload();
+  };
+
+  const handleSkipOneDay = () => {
+    supabaseService.skipOneDay();
+    const nextVirtualToday = supabaseService.getVirtualTodayString();
+    alert(`[Judge/Demo] 시스템 날짜가 하루 앞으로 진행되었습니다 ⏩\n(현재 가상 데모 날짜: ${nextVirtualToday})`);
     window.location.reload();
   };
 
@@ -187,7 +241,16 @@ function HomeContent() {
         </div>
 
         {/* System Settings & Toggles */}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Judge/Demo Skip Day Button */}
+          <button
+            onClick={handleSkipOneDay}
+            title="[Judge/Demo] 하루 지나기 (+1일 Skip)"
+            className="px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-400/40 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold transition-all duration-200 cursor-pointer flex items-center gap-1 shadow-xs shrink-0"
+          >
+            <FastForward size={13} className="text-amber-600 dark:text-amber-400 animate-pulse" />
+            <span>하루 Skip</span>
+          </button>
           <ThemeSwitcher />
           <button
             onClick={handleRoleToggle}
@@ -231,102 +294,264 @@ function HomeContent() {
         {(() => {
           const isGuardian = user?.role === "guardian";
 
-          // If Guardian: show shared question if exists, and custom topic proposal + 11-category viewer
+          // Lookup both elderly and guardian answers for todayQuestion
+          const elderlyAnswer = answers.find(
+            (a) => (a.question_id === todayQuestion?.id || a.question_text === todayQuestion?.question_text) && !a.by_guardian
+          );
+          const guardianAnswer = answers.find(
+            (a) => (a.question_id === todayQuestion?.id || a.question_text === todayQuestion?.question_text) && a.by_guardian
+          );
+
+          // Shared Question Card Helper Component (Renders daily question + custom proposed questions)
+          const renderUnifiedQuestionCard = () => {
+            const virtualTodayStr = supabaseService.getVirtualTodayString();
+            const rawActiveQs: DBQuestionHistory[] = [];
+            if (todayQuestion) rawActiveQs.push(todayQuestion);
+            if (customProposedQuestions && customProposedQuestions.length > 0) {
+              rawActiveQs.push(...customProposedQuestions);
+            }
+
+            // Exclude cards where BOTH elderly & guardian have answered AND a new day has arrived
+            const allActiveQs = rawActiveQs.filter((qItem) => {
+              const eAns = answers.find(
+                (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && !a.by_guardian
+              );
+              const gAns = answers.find(
+                (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian
+              );
+
+              const isBothAnswered = Boolean(eAns && gAns);
+              if (isBothAnswered) {
+                const latestAnsDateStr = eAns!.created_at > gAns!.created_at
+                  ? toLocalDateString(eAns!.created_at)
+                  : toLocalDateString(gAns!.created_at);
+                const qDate = toLocalDateString(qItem.created_at);
+                const lastCompletedDate = latestAnsDateStr > qDate ? latestAnsDateStr : qDate;
+
+                // Hide card if next day has arrived after dual completion
+                if (lastCompletedDate < virtualTodayStr) {
+                  return false;
+                }
+              }
+              return true;
+            });
+
+            if (allActiveQs.length === 0) return null;
+
+            return (
+              <div className="flex flex-col gap-5 w-full">
+                {allActiveQs.map((qItem, idx) => {
+                  const elderlyAnswer = answers.find(
+                    (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && !a.by_guardian
+                  );
+                  const guardianAnswer = answers.find(
+                    (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian
+                  );
+
+                  const isCustomProposed = customProposedQuestions.some((cq) => cq.id === qItem.id);
+                  const badgeLabel = isCustomProposed
+                    ? (qItem.created_by === "guardian" ? "🙋‍♀️ 자녀가 제안한 추가 추억 질문" : "👴 어르신 제안 추가 추억 질문")
+                    : (qItem.shared ? "📌 세대 연결 공통 회상 질문" : "📌 오늘의 미션: 회상 구절 적기");
+
+                  return (
+                    <div key={qItem.id} className="w-full p-6 sm:p-7 rounded-3xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left flex flex-col gap-5">
+                      {/* Single Header Badge & Title */}
+                      <div className="flex items-center justify-between">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
+                          <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
+                          {badgeLabel}
+                        </div>
+                        {qItem.shared && (
+                          <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
+                            {elderlyAnswer && guardianAnswer ? "세대 매듭 완결 ✦" : "세대 매듭 연결 중 ✦"}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
+                        &ldquo;{qItem.question_text}&rdquo;
+                      </h3>
+
+                      {qItem.custom_image_url && (
+                        <div className="w-full rounded-2xl overflow-hidden border border-amber-300/80 dark:border-amber-700/60 shadow-xs max-h-64 flex items-center justify-center bg-black/5">
+                          <img
+                            src={qItem.custom_image_url}
+                            alt="첨부된 추억 사진"
+                            className="w-full h-full object-cover max-h-64"
+                          />
+                        </div>
+                      )}
+
+                      {/* Dual Answer Section Inside the SAME Container (Vertical Stack on Home) */}
+                      <div className="flex flex-col gap-3.5 w-full">
+                        {/* 1. Elderly Answer Box */}
+                        <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-900/40 border border-amber-200/90 dark:border-amber-800/60 flex flex-col justify-between gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
+                              👵 어르신(순자 님)의 기억
+                            </span>
+                            {elderlyAnswer ? (
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">기록 완료</span>
+                            ) : (
+                              <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">기록 대기</span>
+                            )}
+                          </div>
+
+                          {elderlyAnswer ? (
+                            <p className="text-xs font-serif text-amber-950 dark:text-amber-100 leading-relaxed italic line-clamp-3">
+                              &ldquo;{elderlyAnswer.answer_text}&rdquo;
+                            </p>
+                          ) : (
+                            <p className="text-xs font-serif text-amber-800/70 dark:text-amber-400/70 italic">
+                              아직 어르신의 기록이 작성되지 않았습니다.
+                            </p>
+                          )}
+
+                          {!isGuardian && (
+                            <button
+                              onClick={() => router.push(`/journal?qid=${qItem.id}`)}
+                              className="w-full py-2 px-3 text-xs font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-1 shadow-xs mt-1"
+                            >
+                              {elderlyAnswer ? (
+                                <>
+                                  <Edit3 size={13} /> 어르신 답변 수정하기
+                                </>
+                              ) : (
+                                "어르신 답변 기록하기 ✦"
+                              )}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 2. Guardian Answer Box */}
+                        <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-900/40 border border-amber-200/90 dark:border-amber-800/60 flex flex-col justify-between gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
+                              🙋‍♀️ 보호자(지영 님)의 기억
+                            </span>
+                            {guardianAnswer ? (
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">기록 완료</span>
+                            ) : (
+                              <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">기록 대기</span>
+                            )}
+                          </div>
+
+                          {guardianAnswer ? (
+                            <p className="text-xs font-serif text-amber-950 dark:text-amber-100 leading-relaxed italic line-clamp-3">
+                              &ldquo;{guardianAnswer.answer_text}&rdquo;
+                            </p>
+                          ) : (
+                            <p className="text-xs font-serif text-amber-800/70 dark:text-amber-400/70 italic">
+                              아직 보호자의 기록이 작성되지 않았습니다.
+                            </p>
+                          )}
+
+                          {isGuardian && (
+                            <button
+                              onClick={() => router.push(`/journal?qid=${qItem.id}`)}
+                              className="w-full py-2 px-3 text-xs font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-1 shadow-xs mt-1"
+                            >
+                              {guardianAnswer ? (
+                                <>
+                                  <Edit3 size={13} /> 보호자 답변 수정하기
+                                </>
+                              ) : (
+                                "보호자 답변 기록하기 ✦"
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Merged Perspective Banner if both answered */}
+                      {elderlyAnswer && guardianAnswer && (
+                        <div className="p-3 rounded-xl bg-amber-200/60 dark:bg-amber-900/60 border border-amber-400/40 text-amber-950 dark:text-amber-100 text-xs font-serif font-bold flex items-center gap-2">
+                          <Sparkles size={14} className="text-amber-700 dark:text-amber-300 shrink-0" />
+                          <span>두 사람의 기억이 하나의 따뜻한 세대 매듭으로 통합 연결되었습니다.</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          // If Guardian View
           if (isGuardian) {
             return (
               <div className="flex flex-col gap-5 w-full">
-                {/* Shared Question for Guardian if exists */}
-                {todayQuestion && todayQuestion.shared && (
-                  <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left flex flex-col gap-4">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40">
-                      <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
-                      📌 세대 연결 공통 회상 질문
-                    </div>
-                    <h3 className="text-lg font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
-                      &ldquo;{todayQuestion.question_text}&rdquo;
-                    </h3>
-                    <button
-                      onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
-                      className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      보호자 답변 기록하기 ✦
-                    </button>
-                  </div>
-                )}
+                {/* Unified Shared Question Container Card */}
+                {renderUnifiedQuestionCard()}
 
-                {/* Guardian Menu Card 1: Custom Topic Proposal */}
-                <div
-                  onClick={() => router.push("/custom-topic")}
-                  className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform">
-                      <Sparkles size={20} />
-                    </div>
-                    <div className="text-left">
-                      <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
-                        어르신께 대화 주제 제안하기
-                      </h4>
-                      <p className="text-xs text-muted-foreground mt-1 font-sans">
-                        옛 앨범 사진이나 이야기 힌트로 정겨운 질문 다듬기
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
-                    &rarr;
-                  </span>
-                </div>
+                {/* Guardian Menu Grid: Custom Topic Proposal & 11-Category Answer Card Viewer (Side-by-side) */}
+                <div className="grid grid-cols-2 gap-3.5 w-full">
+                  {/* Guardian Menu Card 1: Custom Topic Proposal */}
+                  {(() => {
+                    const todayStr = toLocalDateString(new Date());
+                    const hasProposedToday = customProposedQuestions.some((q) => toLocalDateString(q.created_at) === todayStr);
 
-                {/* Guardian Menu Card 2: 11-Category Answer Card Viewer */}
-                <Link href="/narrative" className="w-full group">
-                  <div className="w-full p-6 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+                    return (
+                      <div
+                        onClick={() => router.push("/custom-topic")}
+                        className="p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex flex-col justify-between cursor-pointer group gap-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform shrink-0">
+                            <Sparkles size={20} />
+                          </div>
+                          {hasProposedToday && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                              오늘 제안 완료
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-left flex flex-col gap-1">
+                          <h4 className="text-sm sm:text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                            어르신께 대화 주제 제안하기
+                          </h4>
+                          <p className="text-xs text-muted-foreground font-sans leading-normal">
+                            {hasProposedToday ? "오늘 대화 주제 제안이 완료되었습니다 (하루 1회)" : "옛 앨범 사진이나 이야기 힌트로 정겨운 질문 다듬기"}
+                          </p>
+                        </div>
+                        <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs">
+                          {hasProposedToday ? "제안 내역 보기 &rarr;" : "바로가기 &rarr;"}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Guardian Menu Card 2: 11-Category Answer Card Viewer */}
+                  <Link href="/narrative" className="group h-full">
+                    <div className="h-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex flex-col justify-between cursor-pointer gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
                         <BookOpen size={20} />
                       </div>
-                      <div className="text-left">
-                        <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors">
-                          어르신의 11-카테고리 추억 카드 뷰어
+                      <div className="text-left flex flex-col gap-1">
+                        <h4 className="text-sm sm:text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                          어르신의 11-카테고리 뷰어
                         </h4>
-                        <p className="text-xs text-muted-foreground mt-1 font-sans">
+                        <p className="text-xs text-muted-foreground font-sans leading-normal">
                           인물, 장소, 사건별로 정돈된 어르신의 추억 보관함
                         </p>
                       </div>
+                      <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs">
+                        바로가기 &rarr;
+                      </div>
                     </div>
-                    <span className="text-primary group-hover:translate-x-1 transition-transform text-xl font-bold pr-1">
-                      &rarr;
-                    </span>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
 
-                <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
+                <CalendarWidget answers={answers} diaries={recentDiaries} onSelectDate={handleSelectDate} />
               </div>
             );
           }
 
-          // Elderly Mode (self): Always show Mission 1 & Mission 2 Cards
+          // Elderly Mode (self): Always show Unified Question Card & Mission 2 Cards + 2-Column Horizontal Menu
           return (
             <div className="flex flex-col gap-5 w-full">
-              {/* 1. Today's Question Card - Mission 1 (Self mode) */}
-              {todayQuestion && (
-                <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold w-fit border border-amber-400/40 shadow-xs">
-                    <MessageSquarePlus size={13} className="text-amber-600 dark:text-amber-400" />
-                    📌 오늘의 미션 1: 회상 구절 적기
-                  </div>
-
-                  <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-950 dark:text-amber-100 leading-relaxed select-text">
-                    &ldquo;{todayQuestion.question_text}&rdquo;
-                  </h3>
-
-                  <button
-                    onClick={() => router.push(`/journal?qid=${todayQuestion.id}`)}
-                    className="w-full py-3 text-base font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    기록하기 ✦
-                  </button>
-                </div>
-              )}
+              {/* Unified Shared Question Container Card (Self mode) */}
+              {renderUnifiedQuestionCard()}
 
               {/* 2. Daily Diary Container Card - Mission 2 (Self mode) */}
               <div className="w-full p-6 rounded-2xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left relative flex flex-col gap-4">
@@ -343,7 +568,7 @@ function HomeContent() {
                 </div>
 
                 <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
-                  오늘 어떤 일이 있으셨고, 특별히 드신 음식이 있으신가요?
+                  {dailyDiaryPrompt}
                 </h4>
 
                 {recentDiaries.length > 0 && (
@@ -361,7 +586,29 @@ function HomeContent() {
                 </button>
               </div>
 
-              <CalendarWidget answers={answers} onSelectDate={handleSelectDate} />
+              {/* 3. 11-Category Card Viewer (Self Mode - Full Width) */}
+              <Link href="/narrative" className="group w-full">
+                <div className="w-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+                      <BookOpen size={22} />
+                    </div>
+                    <div className="text-left flex flex-col gap-0.5">
+                      <h4 className="text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                        내 11-카테고리 추억 보관함
+                      </h4>
+                      <p className="text-xs text-muted-foreground font-sans leading-normal">
+                        인물, 장소, 사건별로 차곡차곡 정돈된 나의 서사 보관함
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs shrink-0">
+                    보관함 보기 &rarr;
+                  </div>
+                </div>
+              </Link>
+
+              <CalendarWidget answers={answers} diaries={recentDiaries} onSelectDate={handleSelectDate} />
             </div>
           );
         })()}

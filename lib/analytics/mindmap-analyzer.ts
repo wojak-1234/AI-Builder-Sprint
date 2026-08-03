@@ -39,7 +39,7 @@ export type MindmapAnalyzerResult = {
 export function analyzeMindmap(
   entities: ExtractedEntity[],
   answers: DBAnswer[],
-  narratives: DBNarrative[]
+  _narratives: DBNarrative[]
 ): MindmapAnalyzerResult {
   const now = Date.now();
   const entityStats = new Map<
@@ -143,6 +143,37 @@ export function analyzeMindmap(
     suggestedSharedFrequency,
     scoredEntities,
   };
+}
+
+/**
+ * Selects target entities for question generation.
+ * By default, picks top signal entities, but with a small controlled probability (e.g. 15%),
+ * probabilistically includes a weak/low-connectivity entity (연결도 낮은 엔티티)
+ * to encourage exploring forgotten or rare memory nodes.
+ */
+export function selectTargetEntities(
+  scoredEntities: Array<{ entity: ExtractedEntity; signalScore: number }>,
+  weakEntities: ExtractedEntity[],
+  weakProbability: number = 0.15, // 15% Controlled Low Probability
+  forcedRandom: number | null = null
+): ExtractedEntity[] {
+  if (scoredEntities.length === 0) return [];
+
+  const topEntities = scoredEntities.slice(0, 3).map((s) => s.entity);
+  const randomVal = forcedRandom !== null ? forcedRandom : Math.random();
+
+  // If weak/low-connectivity entities exist and random hits within 15% probability
+  if (weakEntities.length > 0 && randomVal < weakProbability) {
+    const randomIndex = Math.floor((forcedRandom !== null ? forcedRandom : Math.random()) * weakEntities.length);
+    const selectedWeakEntity = weakEntities[randomIndex];
+
+    // Ensure selected weak entity is included at the front of target entities
+    if (!topEntities.some((e) => e.value === selectedWeakEntity.value)) {
+      return [selectedWeakEntity, ...topEntities.slice(0, 2)];
+    }
+  }
+
+  return topEntities;
 }
 
 export type QuestionTypeSelection = {

@@ -48,6 +48,7 @@ export type DBDailyDiary = {
   user_id: string;
   content: string;
   photo_url?: string;
+  mood?: string;
   created_at: string;
   event_date: string;
 };
@@ -120,9 +121,40 @@ const MOCK_KEYS = {
   USERS: "eeum_mock_users",
   ANSWERS: "eeum_mock_answers",
   QUESTIONS: "eeum_mock_questions",
+  PROPOSED_QUESTIONS: "eeum_mock_proposed_questions",
   NARRATIVES: "eeum_mock_narratives",
   DAILY_DIARIES: "eeum_mock_daily_diaries",
   CURRENT_USER: "eeum_mock_curr_user",
+};
+
+const DEMO_DATE_OFFSET_KEY = "eeum_demo_date_offset";
+
+export const getVirtualDateOffset = (): number => {
+  return getLocalStorageItem<number>(DEMO_DATE_OFFSET_KEY, 0);
+};
+
+export const setVirtualDateOffset = (days: number): void => {
+  setLocalStorageItem(DEMO_DATE_OFFSET_KEY, days);
+};
+
+export const skipOneDay = (): number => {
+  const curr = getVirtualDateOffset();
+  const next = curr + 1;
+  setVirtualDateOffset(next);
+  return next;
+};
+
+export const resetVirtualDate = (): void => {
+  setVirtualDateOffset(0);
+};
+
+export const getVirtualTodayString = (): string => {
+  const offset = getVirtualDateOffset();
+  const d = new Date(Date.now() + offset * 86400000);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 };
 
 // Global in-memory fallback store for Node.js server environments
@@ -183,23 +215,7 @@ const seedMockDatabase = () => {
       {
         id: "q-1",
         user_id: "user-elderly-123",
-        question_text: "어릴 적 마당이 있던 집에서 가장 좋아했던 놀이는 무엇이었나요?",
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-        status: "answered",
-        shared: true,
-      },
-      {
-        id: "q-2",
-        user_id: "user-elderly-123",
-        question_text: "학창 시절 소풍 가던 날 아침의 설렘이나 준비했던 도시락 반찬이 기억나시나요?",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        status: "answered",
-        shared: true,
-      },
-      {
-        id: "q-3",
-        user_id: "user-elderly-123",
-        question_text: "첫 직장에 첫 출근하던 날, 어떤 옷을 입고 어떤 마음으로 집을 나서셨나요?",
+        question_text: "학창 시절이나 유년 시절 가장 기억에 남는 정겨운 추억이나 장소는 어디인가요?",
         created_at: new Date().toISOString(),
         status: "pending",
         shared: true,
@@ -209,66 +225,15 @@ const seedMockDatabase = () => {
   }
 
   if (!getLocalStorageItem(MOCK_KEYS.ANSWERS, null)) {
-    const initialAnswers: DBAnswer[] = [
-      {
-        id: "a-1-elderly",
-        user_id: "user-elderly-123",
-        question_id: "q-1",
-        question_text: "어릴 적 마당이 있던 집에서 가장 좋아했던 놀이는 무엇이었나요?",
-        answer_text: "우리 집 마당에 감나무가 한 그루 있었는데, 가을만 되면 동네 아이들이 다 몰려와서 감나무 밑에서 술래잡기를 하고 놀았지. 내가 술래를 많이 했는데, 다들 감나무 뒤에 숨어서 찾기가 쉬웠어. 깔깔거리며 웃던 소리가 아직도 생생해.",
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-        event_date: "1955-10-15",
-        is_private: false,
-        by_guardian: false,
-      },
-      {
-        id: "a-1-guardian",
-        user_id: "user-guardian-456",
-        question_id: "q-1",
-        question_text: "어릴 적 마당이 있던 집에서 가장 좋아했던 놀이는 무엇이었나요?",
-        answer_text: "엄마가 어릴 때 마당에 큰 감나무가 있는 한옥에 사셨다고 들었어요. 이모들이랑 삼촌들이랑 감나무 홍시 따 먹으려고 기다리던 추억을 이야기해 주실 때 제일 표정이 밝으셨어요.",
-        created_at: new Date(Date.now() - 86400000 * 2 + 3600000).toISOString(),
-        event_date: "1955-10-15",
-        is_private: false,
-        by_guardian: true,
-      },
-      {
-        id: "a-2-elderly",
-        user_id: "user-elderly-123",
-        question_id: "q-2",
-        question_text: "학창 시절 소풍 가던 날 아침의 설렘이나 준비했던 도시락 반찬이 기억나시나요?",
-        answer_text: "소풍 가기 전날 밤은 너무 설레서 잠을 못 잤어. 엄마가 새벽 일찍 일어나셔서 고소한 참기름 냄새를 풍기며 분홍 소시지에 계란 옷 입혀서 도시락을 싸 주셨지. 소풍 가서 친구들이랑 돗자리 깔고 나누어 먹던 그 맛은 평생 못 잊어.",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        event_date: "1964-05-20",
-        is_private: false,
-        by_guardian: false,
-      }
-    ];
-    setLocalStorageItem(MOCK_KEYS.ANSWERS, initialAnswers);
+    setLocalStorageItem(MOCK_KEYS.ANSWERS, []);
   }
 
   if (!getLocalStorageItem(MOCK_KEYS.NARRATIVES, null)) {
-    const initialNarratives: DBNarrative[] = [
-      {
-        id: "n-1",
-        user_id: "user-elderly-123",
-        title: "감나무 마당의 술래잡기",
-        summary: "1950년대 중반, 마당에 서 있던 커다란 감나무 뒤로 숨어 술래잡기 놀이를 하며 동네 아이들과 뛰놀던 시절을 회상합니다.",
-        content: "김순자 어르신은 1950년대 가을날, 집 앞마당에 있던 커다란 감나무 주변에서 친구들과 술래잡기를 하며 유년 시절을 보냈습니다. 동네 아이들이 모두 모여 깔깔거리며 웃던 소리가 마당 가득 울려 퍼지곤 했습니다. 자녀 이지영 님 역시 어머니가 어린 시절 마당에 감나무가 있던 기와집에서 살며 친구들과 홍시를 나눠 먹던 추억을 들려주셨던 것을 기억하고 있습니다. 두 사람의 기억 속에 감나무 마당은 따스한 나눔과 천진난만한 웃음이 가득한 장소로 깊이 자리 잡고 있습니다.",
-        event_date: "1955-10-15",
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-      },
-      {
-        id: "n-2",
-        user_id: "user-elderly-123",
-        title: "설레던 소풍날 분홍 소시지 김밥",
-        summary: "1960년대 학창 시절, 어머니가 새벽부터 풍기시던 고소한 참기름 냄새와 노란 계란 옷을 입힌 분홍 소시지 도시락을 안고 나섰던 소풍길을 추억합니다.",
-        content: "1964년 봄, 소풍을 앞둔 여고생 김순자는 전날 밤부터 설레어 쉽게 잠들지 못했습니다. 새벽바람을 가르며 부엌에서 퍼져나오던 참기름의 고소한 향기는 소풍 아침의 신호탄이었습니다. 얇게 채 썬 시금치와 노란 단무지만 단출하게 들어간 김밥이었지만 어머니의 사랑이 깃들어 꿀맛 같았습니다. 계란을 입힌 분홍 소시지가 도시락 한구석을 장식할 때면 말할 수 없는 행복을 느꼈습니다.",
-        event_date: "1964-05-20",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      }
-    ];
-    setLocalStorageItem(MOCK_KEYS.NARRATIVES, initialNarratives);
+    setLocalStorageItem(MOCK_KEYS.NARRATIVES, []);
+  }
+
+  if (!getLocalStorageItem(MOCK_KEYS.DAILY_DIARIES, null)) {
+    setLocalStorageItem(MOCK_KEYS.DAILY_DIARIES, []);
   }
 };
 
@@ -289,7 +254,17 @@ export const supabaseService = {
         const { data: { user } } = await client.auth.getUser();
         if (user) {
           const { data } = await client.from("users").select("*").eq("id", user.id).single();
-          if (data) return data as DBUser;
+          if (data) {
+            const row = data as any;
+            return {
+              ...row,
+              userCode: row.user_code,
+              textSize: row.text_size,
+              colorVision: row.color_vision,
+              questionFrequency: row.question_frequency,
+              appPurpose: row.app_purpose
+            } as DBUser;
+          }
         }
       } catch (err) {
         console.warn("Supabase auth getUser fallback:", err);
@@ -310,7 +285,20 @@ export const supabaseService = {
     if (!isMockMode()) {
       try {
         const client = getSupabaseClient()!;
-        await client.from("users").upsert(user);
+        const dbPayload = {
+          ...user,
+          user_code: user.userCode,
+          text_size: user.textSize,
+          color_vision: user.colorVision,
+          question_frequency: user.questionFrequency,
+          app_purpose: user.appPurpose
+        };
+        delete dbPayload.userCode;
+        delete dbPayload.textSize;
+        delete dbPayload.colorVision;
+        delete dbPayload.questionFrequency;
+        delete dbPayload.appPurpose;
+        await client.from("users").upsert(dbPayload);
       } catch (err) {
         console.warn("Supabase setCurrentUser fallback warning:", err);
       }
@@ -333,29 +321,48 @@ export const supabaseService = {
   getQuestions: async (userId: string): Promise<DBQuestionHistory[]> => {
     if (isMockMode()) {
       const q = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-      return q.filter((x) => x.user_id === userId || x.user_id === "user-elderly-123");
+      const filtered = q.filter((x) => x.user_id === userId || x.user_id === "user-elderly-123" || x.shared);
+      return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     const client = getSupabaseClient()!;
-    const { data } = await client.from("questions_history").select("*").eq("user_id", userId);
+    const { data } = await client
+      .from("questions_history")
+      .select("*")
+      .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+      .order("created_at", { ascending: false });
     return (data as DBQuestionHistory[]) || [];
   },
 
   addQuestion: async (question: DBQuestionHistory): Promise<void> => {
-    if (isMockMode()) {
-      const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-      questions.push(question);
+    const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+    const existingIdx = questions.findIndex(
+      (q) => q.id === question.id || (q.question_text && question.question_text && q.question_text.trim() === question.question_text.trim())
+    );
+
+    if (existingIdx !== -1) {
+      questions[existingIdx] = { ...questions[existingIdx], status: question.status };
       setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
-      return;
+    } else {
+      questions.unshift(question);
+      setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
     }
-    const client = getSupabaseClient()!;
-    await client.from("questions_history").insert(question);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        await client.from("questions_history").upsert(question);
+      } catch (err) {
+        console.warn("Supabase addQuestion warning:", err);
+      }
+    }
   },
 
   getQuestionById: async (questionId: string): Promise<DBQuestionHistory | null> => {
     if (!questionId) return null;
     if (isMockMode()) {
       const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-      return questions.find((q) => q.id === questionId) || null;
+      const proposed = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+      return questions.find((q) => q.id === questionId) || proposed.find((q) => q.id === questionId) || null;
     }
     try {
       const client = getSupabaseClient()!;
@@ -364,26 +371,53 @@ export const supabaseService = {
         .select("*")
         .eq("id", questionId)
         .single();
-      return (data as DBQuestionHistory) || null;
+      if (data) return data as DBQuestionHistory;
+
+      const { data: proposedData } = await client
+        .from("custom_proposed_questions")
+        .select("*")
+        .eq("id", questionId)
+        .single();
+      return (proposedData as DBQuestionHistory) || null;
     } catch {
       const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-      return questions.find((q) => q.id === questionId) || null;
+      const proposed = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+      return questions.find((q) => q.id === questionId) || proposed.find((q) => q.id === questionId) || null;
     }
   },
 
-  updateQuestionStatus: async (questionId: string, status: "pending" | "answered"): Promise<void> => {
-    // Always update Local/In-Memory fallback store
+  updateQuestionStatus: async (questionId: string, status: "pending" | "answered", questionText?: string): Promise<void> => {
+    // 1. Update Local/In-Memory questions
     const questions = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
-    const idx = questions.findIndex((q) => q.id === questionId);
-    if (idx !== -1) {
-      questions[idx].status = status;
-      setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
-    }
+    let updatedQ = false;
+    questions.forEach((q) => {
+      if (q.id === questionId || (questionText && q.question_text.trim() === questionText.trim())) {
+        q.status = status;
+        updatedQ = true;
+      }
+    });
+    if (updatedQ) setLocalStorageItem(MOCK_KEYS.QUESTIONS, questions);
+
+    // 2. Update Local/In-Memory proposed questions
+    const proposed = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+    let updatedP = false;
+    proposed.forEach((q) => {
+      if (q.id === questionId || (questionText && q.question_text.trim() === questionText.trim())) {
+        q.status = status;
+        updatedP = true;
+      }
+    });
+    if (updatedP) setLocalStorageItem(MOCK_KEYS.PROPOSED_QUESTIONS, proposed);
 
     if (!isMockMode()) {
       try {
         const client = getSupabaseClient()!;
         await client.from("questions_history").update({ status }).eq("id", questionId);
+        await client.from("custom_proposed_questions").update({ status }).eq("id", questionId);
+        if (questionText) {
+          await client.from("questions_history").update({ status }).eq("question_text", questionText.trim());
+          await client.from("custom_proposed_questions").update({ status }).eq("question_text", questionText.trim());
+        }
       } catch (err) {
         console.warn("Supabase updateQuestionStatus warning:", err);
       }
@@ -406,6 +440,126 @@ export const supabaseService = {
     await client.from("questions_history").upsert(qHistory);
   },
 
+  getCustomProposedQuestions: async (userId: string): Promise<DBQuestionHistory[]> => {
+    const localProposed = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+
+    if (isMockMode()) {
+      const uniqueMap = new Map<string, DBQuestionHistory>();
+      localProposed.forEach((q) => {
+        if (q.user_id === userId || q.user_id === "user-elderly-123" || q.shared) {
+          uniqueMap.set(q.id, q);
+        }
+      });
+      return Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    const client = getSupabaseClient()!;
+    const uniqueMap = new Map<string, DBQuestionHistory>();
+
+    // 1. Primary Source: custom_proposed_questions table (Highest Priority)
+    try {
+      const { data, error } = await client
+        .from("custom_proposed_questions")
+        .select("*")
+        .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+        .order("created_at", { ascending: false });
+      if (!error && data && data.length > 0) {
+        (data as DBQuestionHistory[]).forEach((q) => uniqueMap.set(q.id, q));
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 2. Secondary Source: questions_history table (Only add if ID is NOT already in custom_proposed_questions)
+    try {
+      const { data: qhData } = await client
+        .from("questions_history")
+        .select("*")
+        .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+        .order("created_at", { ascending: false });
+      if (qhData && qhData.length > 0) {
+        const customQh = (qhData as DBQuestionHistory[]).filter((q) => q.id.startsWith("q-custom-") || q.created_by);
+        customQh.forEach((q) => {
+          if (!uniqueMap.has(q.id)) {
+            uniqueMap.set(q.id, q);
+          }
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 3. Fallback: LocalStorage (Only add if ID is NOT present in DB items)
+    localProposed.forEach((q) => {
+      if (q.user_id === userId || q.user_id === "user-elderly-123" || q.shared) {
+        if (!uniqueMap.has(q.id)) {
+          uniqueMap.set(q.id, q);
+        }
+      }
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  },
+
+  saveCustomProposedQuestion: async (qHistory: DBQuestionHistory): Promise<void> => {
+    // Save only to PROPOSED_QUESTIONS (single source of truth).
+    const proposed = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+    const pIdx = proposed.findIndex((q) => q.id === qHistory.id);
+    if (pIdx !== -1) {
+      proposed[pIdx] = qHistory;
+    } else {
+      proposed.unshift(qHistory);
+    }
+    setLocalStorageItem(MOCK_KEYS.PROPOSED_QUESTIONS, proposed);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        const qhPayload = {
+          id: qHistory.id,
+          user_id: qHistory.user_id,
+          question_text: qHistory.question_text,
+          created_at: qHistory.created_at,
+          status: qHistory.status || "pending",
+          shared: Boolean(qHistory.shared),
+        };
+        // Update both custom_proposed_questions and questions_history with updated question_text
+        await client.from("custom_proposed_questions").upsert(qHistory);
+        await client.from("questions_history").upsert(qhPayload);
+
+        // Sync question_text on answers table if existing answers reference this question_id
+        if (qHistory.id) {
+          await client
+            .from("answers")
+            .update({ question_text: qHistory.question_text })
+            .eq("question_id", qHistory.id);
+        }
+      } catch (err) {
+        console.warn("Supabase custom_proposed_questions save warning:", err);
+      }
+    }
+  },
+
+  updateCustomProposedQuestionStatus: async (questionId: string, status: "pending" | "answered"): Promise<void> => {
+    const list = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+    list.forEach((q) => {
+      if (q.id === questionId) {
+        q.status = status;
+      }
+    });
+    setLocalStorageItem(MOCK_KEYS.PROPOSED_QUESTIONS, list);
+
+    if (!isMockMode()) {
+      try {
+        const client = getSupabaseClient()!;
+        await client.from("questions_history").update({ status }).eq("id", questionId);
+        await client.from("custom_proposed_questions").update({ status }).eq("id", questionId);
+      } catch (err) {
+        console.warn("Supabase custom_proposed_questions update warning:", err);
+      }
+    }
+  },
+
   getAnswers: async (userId: string): Promise<DBAnswer[]> => {
     if (isMockMode()) {
       const answers = getLocalStorageItem<DBAnswer[]>(MOCK_KEYS.ANSWERS, []);
@@ -417,10 +571,14 @@ export const supabaseService = {
           (a) => (a.user_id === userId || a.user_id === me.paired_user_id) && !a.is_private
         );
       }
-      return answers.filter((a) => a.user_id === userId || a.user_id === "user-elderly-123");
+      return answers.filter((a) => !a.is_private || a.user_id === userId || a.user_id === "user-elderly-123");
     }
     const client = getSupabaseClient()!;
-    const { data } = await client.from("answers").select("*").eq("user_id", userId);
+    const { data } = await client
+      .from("answers")
+      .select("*")
+      .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,is_private.eq.false`)
+      .order("created_at", { ascending: false });
     return (data as DBAnswer[]) || [];
   },
 
@@ -428,9 +586,20 @@ export const supabaseService = {
     if (isMockMode()) {
       console.log("   [Mock DB] Saving Answer to Local/In-Memory store:", answer.id);
       const answers = getLocalStorageItem<DBAnswer[]>(MOCK_KEYS.ANSWERS, []);
-      const idx = answers.findIndex((a) => a.id === answer.id);
+      let idx = answers.findIndex((a) => a.id === answer.id);
+
+      // Deduplication: If ID doesn't match directly, check for existing answer for the same question & role
+      if (idx === -1) {
+        idx = answers.findIndex(
+          (a) =>
+            ((a.question_id && answer.question_id && a.question_id !== "q-default" && answer.question_id !== "q-default" && a.question_id === answer.question_id) ||
+              (a.question_text && answer.question_text && a.question_text.trim() === answer.question_text.trim())) &&
+            Boolean(a.by_guardian) === Boolean(answer.by_guardian)
+        );
+      }
+
       if (idx !== -1) {
-        answers[idx] = answer;
+        answers[idx] = { ...answer, id: answers[idx].id };
       } else {
         answers.push(answer);
       }
@@ -439,9 +608,85 @@ export const supabaseService = {
     }
     console.log("   [Real Supabase] Saving Answer to Table 'answers':", answer.id);
     const client = getSupabaseClient()!;
-    const { error } = await client.from("answers").upsert(answer);
+
+    // Clean payload for Supabase database table schema (answers table)
+    const payload: any = {
+      id: answer.id,
+      user_id: answer.user_id,
+      question_id: answer.question_id || `q-${answer.id}`,
+      question_text: answer.question_text || "회상 기록",
+      answer_text: answer.answer_text,
+      created_at: answer.created_at || new Date().toISOString(),
+      event_date: answer.event_date || new Date().toISOString().substring(0, 10),
+      is_private: Boolean(answer.is_private),
+      by_guardian: Boolean(answer.by_guardian),
+    };
+    if (answer.media_url) payload.media_url = answer.media_url;
+    if (answer.voice_url) payload.voice_url = answer.voice_url;
+
+    // Ensure questions_history row exists first to avoid Foreign Key constraint error (code 23503)
+    try {
+      const questionsList = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.QUESTIONS, []);
+      const proposedList = getLocalStorageItem<DBQuestionHistory[]>(MOCK_KEYS.PROPOSED_QUESTIONS, []);
+      const existingQ =
+        questionsList.find((q) => q.id === payload.question_id || (q.question_text && payload.question_text && q.question_text.trim() === payload.question_text.trim())) ||
+        proposedList.find((q) => q.id === payload.question_id || (q.question_text && payload.question_text && q.question_text.trim() === payload.question_text.trim()));
+
+      const qhPayload: any = {
+        id: payload.question_id,
+        user_id: payload.user_id,
+        question_text: payload.question_text,
+        created_at: payload.created_at,
+        status: existingQ ? existingQ.status : (payload.question_id.startsWith("q-custom-") ? "pending" : "answered"),
+        shared: true,
+      };
+      if (answer.memory_zone) qhPayload.memory_zone = answer.memory_zone;
+
+      let { error: qhError } = await client.from("questions_history").upsert(qhPayload);
+
+      // Fallback retry if questions_history lacks optional columns (code PGRST204)
+      if (qhError && qhError.code === "PGRST204") {
+        console.warn("Supabase questions_history schema missing optional columns (PGRST204). Retrying with core payload...");
+        const coreQhPayload = {
+          id: payload.question_id,
+          user_id: payload.user_id,
+          question_text: payload.question_text,
+          created_at: payload.created_at,
+          status: "answered",
+        };
+        const retryQh = await client.from("questions_history").upsert(coreQhPayload);
+        qhError = retryQh.error;
+      }
+
+      if (qhError) {
+        console.warn("Supabase questions_history pre-upsert warning:", JSON.stringify(qhError, null, 2));
+      }
+    } catch (qErr) {
+      console.warn("Supabase questions_history pre-upsert catch warning:", qErr);
+    }
+
+    let { error } = await client.from("answers").upsert(payload);
+
+    // Fallback retry if Supabase DB table lacks media_url/voice_url columns (code PGRST204)
+    if (error && error.code === "PGRST204") {
+      console.warn("Supabase answers table schema missing optional columns (PGRST204). Retrying with core payload...");
+      const corePayload = {
+        id: answer.id,
+        user_id: answer.user_id,
+        question_id: answer.question_id || `q-${answer.id}`,
+        question_text: answer.question_text || "회상 기록",
+        answer_text: answer.answer_text,
+        created_at: answer.created_at || new Date().toISOString(),
+        event_date: answer.event_date || new Date().toISOString().substring(0, 10),
+        is_private: Boolean(answer.is_private),
+        by_guardian: Boolean(answer.by_guardian),
+      };
+      const retry = await client.from("answers").upsert(corePayload);
+      error = retry.error;
+    }
+
     if (error) {
-      console.error("Supabase saveAnswer error:", error);
+      console.error("Supabase saveAnswer error:", JSON.stringify(error, null, 2));
     }
   },
 
@@ -461,40 +706,75 @@ export const supabaseService = {
       content: row.content,
       event_date: row.event_date,
       created_at: row.created_at,
-      mergedAnswers: row.merged_answers
+      mergedAnswers: row.merged_answers,
+      chapterTag: row.chapter_tag
     }));
   },
 
   saveNarrative: async (narrative: DBNarrative): Promise<void> => {
+    // Always store in Local/In-Memory fallback store first
+    const narratives = getLocalStorageItem<DBNarrative[]>(MOCK_KEYS.NARRATIVES, []);
+    let idx = narratives.findIndex((n) => n.id === narrative.id);
+
+    // Deduplication: Match by user_id and event_date year if exact ID isn't found
+    if (idx === -1) {
+      const targetYear = (narrative.event_date || "1960").substring(0, 4);
+      idx = narratives.findIndex(
+        (n) => n.user_id === narrative.user_id && (n.event_date || "").substring(0, 4) === targetYear
+      );
+    }
+
+    if (idx !== -1) {
+      narratives[idx] = { ...narrative, id: narratives[idx].id };
+    } else {
+      narratives.push(narrative);
+    }
+    setLocalStorageItem(MOCK_KEYS.NARRATIVES, narratives);
+
     if (isMockMode()) {
-      console.log("   [Mock DB] Saving Narrative to Local/In-Memory store:", narrative.id);
-      const narratives = getLocalStorageItem<DBNarrative[]>(MOCK_KEYS.NARRATIVES, []);
-      const idx = narratives.findIndex((n) => n.id === narrative.id);
-      if (idx !== -1) {
-        narratives[idx] = narrative;
-      } else {
-        narratives.push(narrative);
-      }
-      setLocalStorageItem(MOCK_KEYS.NARRATIVES, narratives);
+      console.log("   [Mock DB] Saved Narrative to Local/In-Memory store:", narrative.id);
       return;
     }
-    console.log("   [Real Supabase] Saving Narrative to Table 'narratives':", narrative.id);
-    const client = getSupabaseClient()!;
-    
-    const dbPayload = {
-      id: narrative.id,
-      user_id: narrative.user_id,
-      title: narrative.title,
-      summary: narrative.summary,
-      content: narrative.content,
-      event_date: narrative.event_date,
-      created_at: narrative.created_at,
-      merged_answers: narrative.mergedAnswers
-    };
 
-    const { error } = await client.from("narratives").upsert(dbPayload);
-    if (error) {
-      console.error("Supabase saveNarrative error:", error);
+    console.log("   [Real Supabase] Saving Narrative to Table 'narratives':", narrative.id);
+    try {
+      const client = getSupabaseClient()!;
+      
+      const dbPayload = {
+        id: narrative.id,
+        user_id: narrative.user_id,
+        title: narrative.title,
+        summary: narrative.summary,
+        content: narrative.content,
+        event_date: narrative.event_date,
+        created_at: narrative.created_at,
+        merged_answers: narrative.mergedAnswers,
+        chapter_tag: narrative.chapterTag
+      };
+
+      let { error } = await client.from("narratives").upsert(dbPayload);
+
+      // Fallback retry if remote Supabase schema is missing merged_answers or chapter_tag (code PGRST204)
+      if (error && error.code === "PGRST204") {
+        console.warn("Supabase narratives table schema missing optional columns (PGRST204). Retrying with core payload...");
+        const corePayload = {
+          id: narrative.id,
+          user_id: narrative.user_id,
+          title: narrative.title,
+          summary: narrative.summary,
+          content: narrative.content,
+          event_date: narrative.event_date,
+          created_at: narrative.created_at,
+        };
+        const retry = await client.from("narratives").upsert(corePayload);
+        error = retry.error;
+      }
+
+      if (error) {
+        console.error("Supabase saveNarrative error:", JSON.stringify(error, null, 2));
+      }
+    } catch (err) {
+      console.warn("Supabase saveNarrative exception (fallback to local memory):", err);
     }
   },
 
@@ -504,7 +784,9 @@ export const supabaseService = {
       localStorage.removeItem(MOCK_KEYS.ANSWERS);
       localStorage.removeItem(MOCK_KEYS.QUESTIONS);
       localStorage.removeItem(MOCK_KEYS.NARRATIVES);
+      localStorage.removeItem(MOCK_KEYS.DAILY_DIARIES);
       localStorage.removeItem(MOCK_KEYS.CURRENT_USER);
+      seedMockDatabase();
     }
   },
 
@@ -569,8 +851,13 @@ export const supabaseService = {
 
       if (error || !data) return filteredLocal;
       return data as DBDailyDiary[];
-    } catch (err) {
+    } catch (_err) {
       return filteredLocal;
     }
   },
+
+  getVirtualDateOffset,
+  skipOneDay,
+  resetVirtualDate,
+  getVirtualTodayString,
 };

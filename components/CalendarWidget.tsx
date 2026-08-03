@@ -2,36 +2,79 @@
 
 import { useEffect, useRef, useState } from "react";
 import { animate } from "animejs";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { DBAnswer } from "@/services/supabase-service";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DBAnswer, DBDailyDiary } from "@/services/supabase-service";
+
+// Helper function to convert ISO string or Date into local YYYY-MM-DD
+const toLocalDateString = (isoOrDateStr?: string | Date): string => {
+  if (!isoOrDateStr) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  const dateObj = typeof isoOrDateStr === "string" ? new Date(isoOrDateStr) : isoOrDateStr;
+  if (isNaN(dateObj.getTime())) {
+    return String(isoOrDateStr).slice(0, 10);
+  }
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 type CalendarWidgetProps = {
   answers: DBAnswer[];
+  diaries?: DBDailyDiary[];
   onSelectDate: (dateStr: string, dayAnswers: DBAnswer[]) => void;
 };
 
-export default function CalendarWidget({ answers, onSelectDate }: CalendarWidgetProps) {
+export default function CalendarWidget({ answers, diaries = [], onSelectDate }: CalendarWidgetProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
 
-  // Format YYYY-MM-DD
+  // Format YYYY-MM-DD for target cell
   const formatDateKey = (y: number, m: number, d: number) => {
     const mm = String(m + 1).padStart(2, "0");
     const dd = String(d).padStart(2, "0");
     return `${y}-${mm}-${dd}`;
   };
 
-  // Group answers by created_at date (YYYY-MM-DD)
+  // Group answers & diaries by local created_at date (YYYY-MM-DD)
   const answersByDateMap = new Map<string, DBAnswer[]>();
+  
   answers.forEach((ans) => {
-    const key = ans.created_at.slice(0, 10);
+    const key = toLocalDateString(ans.created_at);
     if (!answersByDateMap.has(key)) {
       answersByDateMap.set(key, []);
     }
     answersByDateMap.get(key)!.push(ans);
+  });
+
+  diaries.forEach((d) => {
+    const key = toLocalDateString(d.created_at);
+    if (!answersByDateMap.has(key)) {
+      answersByDateMap.set(key, []);
+    }
+    const existing = answersByDateMap.get(key)!;
+    if (!existing.some((a) => a.id === d.id)) {
+      existing.push({
+        id: d.id,
+        user_id: d.user_id,
+        question_id: "diary",
+        question_text: "📌 오늘의 일상 일기",
+        answer_text: d.content,
+        media_url: d.photo_url,
+        created_at: d.created_at,
+        event_date: toLocalDateString(d.created_at),
+        is_private: false,
+        by_guardian: false,
+      });
+    }
   });
 
   // Calculate days in month
@@ -57,21 +100,17 @@ export default function CalendarWidget({ answers, onSelectDate }: CalendarWidget
         easing: "easeOutBack",
       });
     }
-  }, [year, month, answers]);
+  }, [year, month, answers, diaries]);
 
-  const todayStr = formatDateKey(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    new Date().getDate()
-  );
+  const todayStr = toLocalDateString(new Date());
 
   return (
-    <div className="w-full p-6 rounded-2xl bg-secondary border border-border shadow-sm flex flex-col gap-5 text-left transition-colors duration-300">
+    <div className="w-full pt-6 pb-4 px-3 sm:px-4 rounded-3xl bg-transparent border-t border-border/40 flex flex-col gap-4 text-left transition-colors duration-300">
       {/* Calendar Header: Month Nav */}
       <div className="flex items-center justify-between">
         <div>
           <span className="text-[10px] text-highlight font-serif font-bold tracking-widest uppercase block">
-            기록 달력
+            📅 활동 기록 데이터 뷰
           </span>
           <h3 className="text-xl font-serif font-bold text-foreground mt-0.5">
             {year}년 {month + 1}월
@@ -135,11 +174,10 @@ export default function CalendarWidget({ answers, onSelectDate }: CalendarWidget
                 </div>
               ) : (
                 <span
-                  className={`text-sm font-serif ${
-                    isToday
+                  className={`text-sm font-serif ${isToday
                       ? "font-bold text-primary underline underline-offset-4"
                       : "text-foreground/80 group-hover:text-primary"
-                  }`}
+                    }`}
                 >
                   {dayNum}
                 </span>

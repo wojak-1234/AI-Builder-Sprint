@@ -21,6 +21,7 @@ function JournalContent() {
   const qid = rawQid.replace(/[^a-zA-Z0-9\-_]/g, "").trim();
 
   const [questionText, setQuestionText] = useState<string>("오늘 하루의 소중한 추억을 들려주세요.");
+  const [questionImageUrl, setQuestionImageUrl] = useState<string | null>(null);
   const [user, setUser] = useState<DBUser | null>(null);
   const [answerType, setAnswerType] = useState<"text" | "voice" | "ocr" | null>(null);
 
@@ -43,11 +44,15 @@ function JournalContent() {
   // OCR Correction / Editing State (2-step rules)
   const [ocrConfirmStep, setOcrConfirmStep] = useState<"ask" | "edit" | "confirmed">("ask");
   const [ocrCorrectionText, setOcrCorrectionText] = useState("");
+  const [photoDescription, setPhotoDescription] = useState("");
 
   // Pipeline Status / Loading
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
   const [safetyError, setSafetyError] = useState<string | null>(null);
+
+  // Existing Answer Edit state
+  const [existingAnswerId, setExistingAnswerId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -63,19 +68,44 @@ function JournalContent() {
       }
       setUser(curr);
 
-      // Secure Question Lookup from DB via qid
+      // Secure Question & Existing Answer Lookup from DB via qid
+      const elderlyId = curr.role === "self" ? curr.id : curr.paired_user_id || "user-elderly-123";
+      const userAnswers = await supabaseService.getAnswers(elderlyId);
+
+      let targetQuestionText = "";
       if (qid) {
         const foundQ = await supabaseService.getQuestionById(qid);
         if (foundQ && foundQ.question_text) {
+          targetQuestionText = foundQ.question_text;
           setQuestionText(foundQ.question_text);
+          if (foundQ.custom_image_url) setQuestionImageUrl(foundQ.custom_image_url);
         } else {
           // If qid not found, fetch active pending question or default
-          const questions = await supabaseService.getQuestions(curr.id);
+          const questions = await supabaseService.getQuestions(elderlyId);
           const pending = questions.find((q) => q.status === "pending");
           if (pending) {
+            targetQuestionText = pending.question_text;
             setQuestionText(pending.question_text);
+            if (pending.custom_image_url) setQuestionImageUrl(pending.custom_image_url);
           }
         }
+      }
+
+      const isGuardian = curr.role === "guardian";
+      const existingAns = userAnswers.find((a) => {
+        const matchQ = (qid && a.question_id === qid) || (targetQuestionText && a.question_text.trim() === targetQuestionText.trim());
+        const matchRole = isGuardian ? (a.by_guardian || a.user_id === curr.id) : (!a.by_guardian || a.user_id === curr.id);
+        return matchQ && matchRole;
+      }) || userAnswers.find((a) => {
+        const matchQ = (qid && a.question_id === qid) || (targetQuestionText && a.question_text.trim() === targetQuestionText.trim());
+        const matchRole = isGuardian ? a.by_guardian : !a.by_guardian;
+        return matchQ && matchRole;
+      });
+
+      if (existingAns) {
+        setExistingAnswerId(existingAns.id);
+        setTextAnswer(existingAns.answer_text);
+        setAnswerType("text"); // Direct edit mode: Open text editor with existing text pre-filled!
       }
     }
     loadInitialData();
@@ -192,6 +222,7 @@ function JournalContent() {
     setOcrFile(null);
     setOcrPreview(null);
     setOcrResultText("");
+    setPhotoDescription("");
     setOcrConfirmStep("ask");
   };
 
@@ -207,12 +238,39 @@ function JournalContent() {
     if (answerType === "text") finalAnswerText = textAnswer;
     if (answerType === "voice") finalAnswerText = voiceText;
     if (answerType === "ocr") {
-      finalAnswerText = ocrConfirmStep === "edit" ? ocrCorrectionText : ocrResultText;
+      const ocrText = ocrConfirmStep === "edit" ? ocrCorrectionText : ocrResultText;
+      const descText = photoDescription.trim();
+      if (descText && ocrText) {
+        finalAnswerText = `[사진 설명] ${descText}\n\n[지면 판독문] ${ocrText}`;
+      } else if (descText) {
+        finalAnswerText = `[사진 설명] ${descText}`;
+      } else {
+        finalAnswerText = ocrText;
+      }
     }
 
     if (!finalAnswerText.trim()) {
       alert("답변 내용을 작성해 주세요.");
       return;
+    }
+
+    // Rate Limiting Check (2 minutes cooldown = 120,000 ms per edit for judge/demo)
+    const rateLimitKey = `eeum_last_edit_time_${activeUser.id}_${qid || "default"}`;
+    if (typeof window !== "undefined") {
+      const lastEditTimeStr = localStorage.getItem(rateLimitKey);
+      if (lastEditTimeStr) {
+        const lastEditTime = parseInt(lastEditTimeStr, 10);
+        const elapsed = Date.now() - lastEditTime;
+        const cooldown = 120000; // 2 minutes (120s)
+        if (elapsed < cooldown) {
+          const remainingSec = Math.ceil((cooldown - elapsed) / 1000);
+          const mins = Math.floor(remainingSec / 60);
+          const secs = remainingSec % 60;
+          const timeStr = mins > 0 ? `${mins}분 ${secs}초` : `${secs}초`;
+          alert(`답변 수정은 2분에 1회만 가능합니다.\n(${timeStr} 후 다시 시도해 주세요)`);
+          return;
+        }
+      }
     }
 
     try {
@@ -232,7 +290,7 @@ function JournalContent() {
       const elderlyId = activeUser.role === "self" ? activeUser.id : activeUser.paired_user_id || "user-elderly-123";
 
       const newAnswer: DBAnswer = {
-        id: `a-${Date.now()}`,
+        id: existingAnswerId || `a-${Date.now()}`,
         user_id: activeUser.id,
         question_id: qid || "q-default",
         question_text: questionText || "소중한 회상 기록",
@@ -244,8 +302,23 @@ function JournalContent() {
       };
 
       await supabaseService.saveAnswer(newAnswer);
-      if (qid) {
-        await supabaseService.updateQuestionStatus(qid, "answered");
+
+      // Check if both elderly and guardian have answered this question to mark it fully answered
+      const allUserAnswers = await supabaseService.getAnswers(elderlyId);
+      const targetQText = questionText ? questionText.trim() : "";
+      const elderlyAns = allUserAnswers.find((a) => (a.question_id === qid || (a.question_text && a.question_text.trim() === targetQText)) && !a.by_guardian);
+      const guardianAns = allUserAnswers.find((a) => (a.question_id === qid || (a.question_text && a.question_text.trim() === targetQText)) && a.by_guardian);
+
+      const targetQ = qid ? await supabaseService.getQuestionById(qid) : null;
+      const isSharedQ = targetQ ? targetQ.shared !== false : true;
+
+      // Only update question status to "answered" if BOTH elderly and guardian have answered (or if not a shared question)
+      if (!isSharedQ || (elderlyAns && guardianAns)) {
+        if (qid) {
+          await supabaseService.updateQuestionStatus(qid, "answered", questionText);
+        } else if (questionText) {
+          await supabaseService.updateQuestionStatus("q-default", "answered", questionText);
+        }
       }
 
       try {
@@ -258,6 +331,11 @@ function JournalContent() {
         }
       } catch (narrativeErr) {
         console.warn("Narrative background update warning:", narrativeErr);
+      }
+
+      // Record rate limit timestamp
+      if (typeof window !== "undefined") {
+        localStorage.setItem(rateLimitKey, Date.now().toString());
       }
 
       setSubmitMessage("저장이 완료되었어요! 장적을 닫고 있습니다.");
@@ -309,63 +387,103 @@ function JournalContent() {
 
       {/* Main Journaling Interface */}
       <main className="w-full max-w-lg mx-auto flex-1 flex flex-col justify-between gap-8">
-        {/* Question Bubble */}
-        <div className="p-6 rounded-2xl bg-secondary border border-border select-text">
-          <span className="text-[10px] text-highlight font-serif font-bold tracking-wider block mb-2 select-none">이전 서화 질문</span>
-          <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground leading-loose">
+        {/* Hero Question Banner */}
+        <div className="p-7 sm:p-8 rounded-3xl hero-remembrance-card text-left select-text relative flex flex-col gap-3">
+          <div className="stamp-badge w-fit">
+            <Sparkles size={13} className="text-amber-600 dark:text-amber-400" />
+            <span>오늘의 회상 구절 질문</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-serif font-black text-amber-950 dark:text-amber-100 leading-relaxed tracking-tight">
             &ldquo;{questionText}&rdquo;
           </h2>
+          {questionImageUrl && (
+            <div className="w-full rounded-2xl overflow-hidden border border-amber-300/80 dark:border-amber-700/60 max-h-56 flex items-center justify-center bg-black/10 mt-1">
+              <img src={questionImageUrl} alt="추억 사진" className="w-full h-full object-cover max-h-56" />
+            </div>
+          )}
         </div>
 
         {/* Input Selector or Inputs */}
         <div className="flex-1 flex flex-col justify-center">
           {!answerType ? (
             <div className="flex flex-col gap-4 w-full">
-              <h3 className="text-base font-serif font-bold text-zinc-500 dark:text-zinc-400 text-left mb-2 select-none">
-                구절을 채울 방식을 선택해 주세요
+              <h3 className="text-base font-serif font-bold text-muted-foreground text-left mb-1 select-none">
+                답변 수단을 선택해 주세요
               </h3>
 
-              {/* Type Option */}
-              <button
-                onClick={() => setAnswerType("text")}
-                className="flex items-start gap-4 p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/30 transition-all text-left cursor-pointer active:scale-98 shadow-sm"
-              >
-                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Keyboard size={20} />
+              {/* 2-Column Grid for Input Options */}
+              <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
+                {/* Keyboard Option Tile */}
+                <div
+                  onClick={() => setAnswerType("text")}
+                  className="tile-card p-5 flex flex-col justify-between gap-4 cursor-pointer group text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-serif font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                      직접 입력
+                    </span>
+                    <Keyboard size={20} className="text-primary group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                      키보드로 쓰기
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-1 font-sans leading-relaxed">
+                      한 글자씩 또박또박 답변 적기
+                    </p>
+                  </div>
+                  <span className="text-xs font-serif font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    선택하기 &rarr;
+                  </span>
                 </div>
-                <div>
-                  <h4 className="text-lg font-serif font-bold text-foreground">키보드로 쓰기 (직접 입력)</h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">키보드로 한 글자씩 또박또박 답변을 적어 내려갑니다.</p>
-                </div>
-              </button>
 
-              {/* Voice Option */}
-              <button
-                onClick={() => setAnswerType("voice")}
-                className="flex items-start gap-4 p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/30 transition-all text-left cursor-pointer active:scale-98 shadow-sm"
-              >
-                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Mic size={20} />
+                {/* Voice Option Tile */}
+                <div
+                  onClick={() => setAnswerType("voice")}
+                  className="tile-card p-5 flex flex-col justify-between gap-4 cursor-pointer group text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-serif font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full">
+                      구두 대화
+                    </span>
+                    <Mic size={20} className="text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                      음성으로 적기
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-1 font-sans leading-relaxed">
+                      마이크로 말씀을 나직이 읊기
+                    </p>
+                  </div>
+                  <span className="text-xs font-serif font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    선택하기 &rarr;
+                  </span>
                 </div>
-                <div>
-                  <h4 className="text-lg font-serif font-bold text-foreground">음성으로 적기 (구두 대화)</h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">마이크로 말씀을 나직이 소리내어 주시면 글씨로 옮깁니다.</p>
-                </div>
-              </button>
 
-              {/* Photo OCR Option */}
-              <button
-                onClick={() => setAnswerType("ocr")}
-                className="flex items-start gap-4 p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/30 transition-all text-left cursor-pointer active:scale-98 shadow-sm"
-              >
-                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <ImageIcon size={20} />
+                {/* Photo OCR Option Tile - Span 2 columns */}
+                <div
+                  onClick={() => setAnswerType("ocr")}
+                  className="col-span-2 tile-card p-5 flex items-center justify-between cursor-pointer group text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+                      <ImageIcon size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors">
+                        옛 편지 / 일기 사진 올리기 (OCR 스캔)
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 font-sans leading-relaxed">
+                        손글씨나 간직한 기록물 사진을 인식하여 판독합니다.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-serif font-bold text-primary group-hover:translate-x-1 transition-transform">
+                    &rarr;
+                  </span>
                 </div>
-                <div>
-                  <h4 className="text-lg font-serif font-bold text-foreground">옛날 편지나 일기 사진 올리기</h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">집에 간직해둔 손글씨나 기록물 사진을 찍어 판독합니다.</p>
-                </div>
-              </button>
+              </div>
             </div>
           ) : (
             <div className="w-full flex flex-col gap-6">
@@ -466,6 +584,15 @@ function JournalContent() {
                           <Trash2 size={14} />
                         </button>
                       </div>
+
+                      {/* Optional Photo Description Text Input */}
+                      <TextArea
+                        value={photoDescription}
+                        onChange={(e) => setPhotoDescription(e.target.value)}
+                        label="사진 설명 / 추억 메모 덧붙이기 (선택)"
+                        placeholder="사진 속 인물, 장소, 당시 상황에 대한 기억이나 메모를 덧붙여주세요..."
+                        className="min-h-[90px] text-sm"
+                      />
 
                       {/* OCR Loader */}
                       {ocrLoading && (
@@ -574,7 +701,7 @@ function JournalContent() {
             >
               {answerType === "ocr" && ocrConfirmStep !== "confirmed"
                 ? "사진 번역 정정을 완료해 주세요"
-                : "장적에 추억 보관 ✦"}
+                : "장적에 추억 보관"}
             </Button>
           </div>
         )}

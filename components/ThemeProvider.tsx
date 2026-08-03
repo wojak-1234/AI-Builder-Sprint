@@ -32,9 +32,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let initialTheme: Theme = "light";
     if (manualFlag && savedTheme) {
       initialTheme = savedTheme;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsManual(true);
     } else {
       initialTheme = evaluateAutomaticTheme();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsManual(false);
     }
     

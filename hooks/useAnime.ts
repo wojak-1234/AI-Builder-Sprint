@@ -31,7 +31,7 @@ export function useAnime<T extends HTMLElement = any>(
       }
 
       // Initialize animation using two-argument signature: animate(targets, params)
-      const animation = animate(targetElement, params);
+      animate(targetElement, params);
 
       // Cleanup on unmount/re-trigger
       return () => {

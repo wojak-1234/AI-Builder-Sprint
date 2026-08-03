@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
 import { safetyGuardAgent } from "@/lib/agents/safety-guard-agent";
-import { analyzeMindmap, calculateQuestionSelectionProbability } from "@/lib/analytics/mindmap-analyzer";
+import { analyzeMindmap, calculateQuestionSelectionProbability, selectTargetEntities } from "@/lib/analytics/mindmap-analyzer";
 import { supabaseService, MemoryZone } from "@/services/supabase-service";
 
 export async function POST(req: NextRequest) {
@@ -15,14 +16,13 @@ export async function POST(req: NextRequest) {
     const answers = await supabaseService.getAnswers(userId);
     const recentDiaries = await supabaseService.getRecentDailyDiaries(userId);
 
-    const mockEntities = answers.flatMap((a) => [
-      { type: "place" as const, value: "마당", sourceAnswerId: a.id },
-      { type: "person" as const, value: "이지영", sourceAnswerId: a.id },
-    ]);
+    // Dynamically extract real entities from user answers using Agent 1 (ocrExtractorAgent)
+    const extractedEntities = await ocrExtractorAgent.extractFromAnswers(answers);
 
     // Mindmap analytics calculation & Signal Score
-    const analytics = analyzeMindmap(mockEntities, answers, []);
-    const topSignalEntities = analytics.scoredEntities.slice(0, 3).map((s) => s.entity);
+    const analytics = analyzeMindmap(extractedEntities, answers, []);
+    // Probabilistically select target entities (includes weak/low-connectivity entity with 15% controlled probability)
+    const targetEntities = selectTargetEntities(analytics.scoredEntities, analytics.weakEntities, 0.15);
     const topSignalScore = analytics.scoredEntities[0]?.signalScore || 0.5;
 
     // Mathematical Probability Selection Engine
@@ -33,10 +33,10 @@ export async function POST(req: NextRequest) {
 
     // Call Agent 2 (question-generator) with MemoryZone & QuestionKind
     const generated = await questionGeneratorAgent.generateQuestions(
-      mockEntities,
+      extractedEntities,
       answers,
       isShared,
-      topSignalEntities,
+      targetEntities,
       memoryZone,
       recentDiaries,
       probabilityResult.selectedKind

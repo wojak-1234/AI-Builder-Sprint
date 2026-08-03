@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
       creatorRole = body.creatorRole || "self";
     }
 
+    let photoContextStr = "";
+
     // Process image file with OCR (Agent 1) if uploaded
     if (imageFile) {
       try {
@@ -37,8 +39,9 @@ export async function POST(req: NextRequest) {
           value: e.value,
           sourceAnswerId: "custom-upload",
         }));
-        if (!textHint && ocrResult.text) {
-          textHint = ocrResult.text.substring(0, 100);
+        photoContextStr = ocrResult.text ? ocrResult.text.trim() : "옛 앨범 사진 스캔본";
+        if (!textHint) {
+          textHint = photoContextStr;
         }
       } catch (ocrErr) {
         console.warn("Custom topic OCR parsing warning:", ocrErr);
@@ -58,17 +61,33 @@ export async function POST(req: NextRequest) {
     if (!safetyCheck.passed) {
       finalQText = textHint
         ? `"${textHint}"에 얽힌 정겹고 따뜻했던 시절의 이야기를 나누어 주시겠어요?`
-        : "사진 속 소중한 그날에 나누었던 도런도런 이야기를 나누어 주시겠어요?";
+        : "사진 속 소중한 그날에 나누었던 이야기를 편안히 들려주시겠어요?";
+    }
+
+    const qid = `q-custom-${Date.now()}`;
+
+    // 사진 첨부 시 사진 판독 맥락을 사용자 첫 응답(Answer) 기록으로 자동 저장
+    if (imageFile) {
+      await supabaseService.saveAnswer({
+        id: `ans-photo-${Date.now()}`,
+        user_id: userId,
+        question_id: qid,
+        question_text: finalQText,
+        answer_text: `[첨부 사진 맥락 기록] ${photoContextStr || "옛 앨범 사진 스캔본"}`,
+        created_at: new Date().toISOString(),
+        event_date: new Date().toISOString().substring(0, 10),
+        is_private: false,
+        by_guardian: creatorRole === "guardian",
+      });
     }
 
     // Save to Database (questions_history)
-    const qid = `q-custom-${Date.now()}`;
     const newQHistory: DBQuestionHistory = {
       id: qid,
       user_id: userId,
       question_text: finalQText,
       created_at: new Date().toISOString(),
-      status: "pending",
+      status: imageFile ? "answered" : "pending",
       shared: generated.shared,
       memory_zone: "sharedIndependentMemory",
       created_by: creatorRole,
@@ -82,6 +101,7 @@ export async function POST(req: NextRequest) {
       qtext: finalQText,
       shared: generated.shared,
       creatorRole,
+      photoContextRecorded: Boolean(imageFile),
     });
   } catch (err: any) {
     console.error("API /api/questions/custom error:", err);

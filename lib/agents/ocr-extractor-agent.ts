@@ -1,5 +1,6 @@
 import { upstageService } from "@/services/upstage-service";
 import { EntityType, ExtractedEntity } from "@/lib/analytics/mindmap-analyzer";
+import { DBAnswer } from "@/services/supabase-service";
 
 export type OcrExtractorOutput = {
   text: string;
@@ -64,4 +65,31 @@ export const ocrExtractorAgent = {
       };
     }
   },
+
+  /**
+   * Extracts entities from an array of DBAnswer objects.
+   * Runs entity extraction in parallel for all answer texts.
+   */
+  extractFromAnswers: async (answers: DBAnswer[]): Promise<ExtractedEntity[]> => {
+    if (!answers || answers.length === 0) return [];
+    try {
+      const results = await Promise.all(
+        answers.map(async (answer) => {
+          if (!answer.answer_text) return [];
+          const res = await ocrExtractorAgent.extract(answer.answer_text, "text/plain", answer.id);
+          // Ensure correct timestamp from answer if available
+          return res.entities.map((e) => ({
+            ...e,
+            sourceAnswerId: answer.id,
+            lastMentionedAt: answer.created_at || new Date().toISOString(),
+          }));
+        })
+      );
+      return results.flat();
+    } catch (err) {
+      console.error("Error in extractFromAnswers:", err);
+      return [];
+    }
+  },
 };
+

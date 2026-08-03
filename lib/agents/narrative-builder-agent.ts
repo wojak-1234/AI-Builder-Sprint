@@ -97,8 +97,11 @@ export const narrativeBuilderAgent = {
 
       const summaryText = `${summaryPrefix}${year}년 시점, ${titleText.trim()}에 관한 기록입니다.`;
 
+      const yearId = (groupAnswers[0].event_date || "1960").substring(0, 4);
+      const stableId = `n-${userId}-${yearId}`;
+
       const narrative: DBNarrative = {
-        id: `n-${Date.now()}-${narratives.length}`,
+        id: stableId,
         user_id: userId,
         title: titleText.trim().replace(/^["']|["']$/g, ""),
         summary: summaryText,

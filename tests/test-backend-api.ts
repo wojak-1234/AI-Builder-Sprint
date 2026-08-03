@@ -26,8 +26,9 @@ import { ocrExtractorAgent } from "../lib/agents/ocr-extractor-agent";
 import { questionGeneratorAgent } from "../lib/agents/question-generator-agent";
 import { narrativeBuilderAgent } from "../lib/agents/narrative-builder-agent";
 import { safetyGuardAgent } from "../lib/agents/safety-guard-agent";
-import { analyzeMindmap, calculateQuestionSelectionProbability } from "../lib/analytics/mindmap-analyzer";
-import { supabaseService, DBAnswer, DBNarrative, DBQuestionHistory, getSupabaseClient, isMockMode } from "../services/supabase-service";
+import { upstageService } from "../services/upstage-service";
+import { analyzeMindmap, calculateQuestionSelectionProbability, selectTargetEntities } from "../lib/analytics/mindmap-analyzer";
+import { supabaseService, DBAnswer, getSupabaseClient, isMockMode } from "../services/supabase-service";
 
 async function runBackendApiTests() {
   console.log("==========================================================");
@@ -303,6 +304,61 @@ async function runBackendApiTests() {
     assert(probHigh.selectedKind === "recent_diary_recall", "Probability Selector (With Diaries)", `P(DiaryBased): ${probHigh.pDiaryBased} -> Kind: ${probHigh.selectedKind}`);
   } catch (err: any) {
     assert(false, "Daily Diary & Probability Selector Test", err.message);
+  }
+
+  console.log("\n----------------------------------------------------------\n");
+
+  // -------------------------------------------------------------------------
+  // Test 11: Weak Entity Probabilistic Selection Test (15% Controlled Low Probability)
+  // -------------------------------------------------------------------------
+  console.log("📌 Test 11: 연결도 낮은 엔티티(Weak Entity) 15% 통제 확률 등장 검증");
+  try {
+    const mockScored = [
+      { entity: { type: "place" as const, value: "마당" }, signalScore: 0.9 },
+      { entity: { type: "person" as const, value: "지영" }, signalScore: 0.8 },
+      { entity: { type: "food" as const, value: "된장찌개" }, signalScore: 0.7 },
+    ];
+    const mockWeak = [{ type: "object" as const, value: "빛바랜 흑백사진" }];
+
+    // Case A: High random value (0.5 > 0.15) -> picks top signal entities normally
+    const normalEntities = selectTargetEntities(mockScored, mockWeak, 0.15, 0.5);
+    assert(normalEntities[0].value === "마당", "Normal Target Entity Selection (Top Signal)", `Selected: "${normalEntities[0].value}"`);
+
+    // Case B: Low random value (0.05 < 0.15) -> probabilistically includes weak entity
+    const weakEntitiesSelected = selectTargetEntities(mockScored, mockWeak, 0.15, 0.05);
+    assert(weakEntitiesSelected[0].value === "빛바랜 흑백사진", "Weak Entity Probabilistic Selection (15% Chance)", `Selected Weak Entity: "${weakEntitiesSelected[0].value}"`);
+  } catch (err: any) {
+    assert(false, "Weak Entity Selection Test", err.message);
+  }
+
+  console.log("\n----------------------------------------------------------\n");
+
+  // -------------------------------------------------------------------------
+  // Test 12: Plan A & Plan C Upstage Embedding 벡터 코사인 유사도 중복 검증
+  // -------------------------------------------------------------------------
+  console.log("📌 Test 12: Plan A & Plan C Upstage Embedding 벡터 코사인 유사도 중복 필터링 검증");
+  try {
+    const v1 = [1, 0, 0];
+    const v2 = [0.99, 0.01, 0];
+    const v3 = [0, 1, 0];
+
+    const simHigh = upstageService.cosineSimilarity(v1, v2);
+    const simLow = upstageService.cosineSimilarity(v1, v3);
+
+    assert(simHigh >= 0.95, "Vector Cosine Similarity (High)", `Similarity: ${simHigh} (Expected >= 0.95)`);
+    assert(simLow <= 0.1, "Vector Cosine Similarity (Low)", `Similarity: ${simLow} (Expected <= 0.1)`);
+
+    // Real API Test if UPSTAGE_API_KEY is available
+    if (process.env.UPSTAGE_API_KEY) {
+      const emb1 = await upstageService.getEmbedding("어릴 적 마당에서 친구들과 어떤 놀이를 하며 노셨나요?");
+      const emb2 = await upstageService.getEmbedding("유년 시절 집 마당에서 친구들과 주로 어떤 놀이를 하셨나요?");
+      if (emb1.length > 0 && emb2.length > 0) {
+        const realSim = upstageService.cosineSimilarity(emb1, emb2);
+        assert(realSim >= 0.80, "Real Upstage Embedding Cosine Similarity", `Real Similarity: ${realSim} (Semantically Duplicate)`);
+      }
+    }
+  } catch (err: any) {
+    assert(false, "Vector Cosine Similarity Test", err.message);
   }
 
   console.log("\n==========================================================");

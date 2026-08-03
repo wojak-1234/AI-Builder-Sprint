@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
 import { narrativeBuilderAgent } from "@/lib/agents/narrative-builder-agent";
 import { safetyGuardAgent } from "@/lib/agents/safety-guard-agent";
 import { analyzeMindmap } from "@/lib/analytics/mindmap-analyzer";
@@ -21,13 +22,9 @@ export async function POST(req: NextRequest) {
       console.warn("Narrative text failed Safety Guard checklist:", guardResult.violations);
     }
 
-    // Run mindmap-analyzer calculations
-    const mockEntities = answers.map((a) => ({
-      type: "place" as const,
-      value: "마당",
-      sourceAnswerId: a.id,
-    }));
-    const analytics = analyzeMindmap(mockEntities, answers, result.narratives);
+    // Dynamically extract real entities from user answers using Agent 1 (ocrExtractorAgent)
+    const extractedEntities = await ocrExtractorAgent.extractFromAnswers(answers);
+    const analytics = analyzeMindmap(extractedEntities, answers, result.narratives);
 
     return NextResponse.json({
       success: true,

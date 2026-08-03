@@ -40,7 +40,7 @@ self.addEventListener("fetch", (event) => {
     ) {
       return;
     }
-  } catch (err) {
+  } catch (_err) {
     return; // Fallback if URL parsing fails
   }
 

@@ -76,6 +76,7 @@ export type DBDailyDiary = {
   user_id: string;
   content: string;
   photo_url?: string;
+  mood?: string;
   created_at: string;
   event_date: string;
 };

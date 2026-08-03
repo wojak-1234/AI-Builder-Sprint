@@ -2,6 +2,74 @@
 
 ## Date
 
+2026-08-02
+
+## Task
+
+`/custom-topic` (추억 주제 제안) 및 `/journal` (회상 답변 작성) 페이지에서 사진/지면 업로드 시 사진 설명(추억 메모) 덧붙이기 기능 추가.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+사용자가 옛 사진이나 기록 지면을 올릴 때 사진 속 인물/장소/상황에 대한 메모나 설명을 덧붙여 함께 제출할 수 있도록 하여 AI 질문 생성 및 회상 기록 보관의 정밀도를 향상함.
+
+## Outcome
+
+* `app/custom-topic/page.tsx`: 사진 업로드 시 사진 설명 입력란 추가 및 OCR 텍스트와 합성하여 AI 질문 생성 및 초기 기록으로 저장.
+* `app/journal/page.tsx`: 사진/지면 업로드 시 사진 설명 입력란 추가 및 OCR 판독문과 깔끔하게 조합하여 답변 기록으로 저장.
+* Next.js 빌드(`npm run build`) 통과 및 타입 안정성 확보.
+
+## Files
+
+* [app/custom-topic/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/custom-topic/page.tsx)
+* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+API 라우트 내 하드코딩된 mockEntities를 Agent 1 (`ocrExtractorAgent`) 기반 실데이터 엔티티 동적 추출 로직으로 전면 교체.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+사용자가 실제로 작성한 회상 답변(`answer_text`)으로부터 11가지 엔티티(인물, 장소, 사물, 음식 등)를 동적으로 추출하여 나이테/공유 마인드맵 분석 및 AI 개인화 회상 질문 생성에 실데이터 반영.
+
+## Outcome
+
+* `lib/agents/ocr-extractor-agent.ts`: 답변 배열(`DBAnswer[]`)로부터 엔티티를 추출하고 `sourceAnswerId` 및 타임스탬프를 매핑하는 `extractFromAnswers` 메서드 구현.
+* `/api/questions`, `/api/narrative`, `/api/mindmap` 라우트: 하드코딩된 `mockEntities` 제거 후 `ocrExtractorAgent.extractFromAnswers(answers)`를 연동하여 실데이터 엔티티 기반 마인드맵 분석 및 질문 생성 수행.
+* Next.js 빌드(`npm run build`) 통과 및 타입 안정성 확보.
+
+## Files
+
+* [lib/agents/ocr-extractor-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/ocr-extractor-agent.ts)
+* [app/api/questions/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/route.ts)
+* [app/api/narrative/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/narrative/route.ts)
+* [app/api/mindmap/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/mindmap/route.ts)
+
+---
+
+## Date
+
 2026-07-31
 
 ## Task
@@ -663,12 +731,648 @@ Planner, Coder
 * [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
 * [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
 
+---
 
+## Date
 
+2026-08-02
 
+## Task
 
+`/home`, `/journal`, `/daily-diary`, `/custom-topic`, `/narrative` 지면의 단조로운 카드 반복 구도를 깨고 "Hero 카드 -> 2-Column Grid 타일 -> 프레임리스 데이터 뷰" 레이아웃 리듬 및 에디토리얼 비주얼 위계 개편.
 
+## AI Tool
 
+Antigravity
 
+## Agent
 
+Planner, Coder, Architect, Code Reviewer
 
+## Purpose
+
+동일한 둥근 모서리와 다크 배경, 균일한 여백으로 쌓이던 단조로운 카드 반복 리듬을 해결하고, 주요 회상 질문을 확실한 시각적 중심(Hero Card)으로 끌어올리며, 보조 메뉴를 2-column 가로 타일 그리드로 재배치하여 사용자의 시각적 피로를 없애고 고급스러운 서화풍 에디토리얼 레이아웃을 구축하기 위함.
+
+## Outcome
+
+* **글로벌 디자인 시스템 강화 (`app/globals.css`)**:
+  - `.hero-remembrance-card` (풍부한 파치먼트 방사형 그라데이션 및 앰비언트 글로우, 테두리 강조)
+  - `.tile-card` (2-column 그리드 전용 인터랙티브 타일)
+  - `.data-view-frame` (프레임리스 데이터 영역)
+  - `.stamp-badge` (에디토리얼 카테고리/상태 배지)
+* **홈 레이아웃 리듬 대대적 개편 (`app/home/page.tsx`)**:
+  - 어머니(본인) 모드 미션 동등 크기화: 오늘의 미션 1(회상 구절)과 미션 2(일상 일기)를 동일한 대형 Hero 카드 크기 및 스타일로 배치하여 중요도와 시각적 균형 일치.
+  - 오늘의 답변 노출 및 수정/재입력 접근 권한: 미션 작성 완료 시 카드가 닫히지 않고 어르신의 보관된 답변 텍스트를 카드 내부에 아름답게 노출하며, `[답변 수정 / 다시 기록하기 ✦]` 버튼을 통해 언제든 직접 수정/재입력에 접근 가능하도록 구현.
+  - 어머니(본인) 모드 2열 그리드 메뉴: 하단 2-column 타일에 자녀 모드와 동일하게 "대화 주제 제안하기" 타일을 추가 배치(대화 주제 제안 + 내 추억 보관함).
+  - 캘린더 영역: 카드 박스 테두리를 완전히 제거하고 오픈 데이터 뷰 구조로 재구성.
+* **캘린더 컴포넌트 프레임리스 전환 (`components/CalendarWidget.tsx`)**:
+  - 답답한 외곽 테두리를 제거하고 활동 기록 데이터 뷰 스타일 적용.
+* **주요 입력 지면 톤앤매너 통일 (`app/journal/page.tsx`, `app/daily-diary/page.tsx`, `app/custom-topic/page.tsx`, `app/narrative/NarrativeClient.tsx`)**:
+  - 상단 질문/주제 엠블렘을 Hero 카드 스타일로 업그레이드하고 입력 수단 선택을 2열 타일 그리드로 개편.
+
+## Files
+
+* [app/globals.css](file:///c:/Users/PC/Desktop/Projects/EEUM/app/globals.css) (수정)
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [components/CalendarWidget.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/CalendarWidget.tsx) (수정)
+* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx) (수정)
+* [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (수정)
+* [app/custom-topic/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/custom-topic/page.tsx) (수정)
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+기존 답변/일기 수정 시 선택 화면 생략 후 텍스트 에디터 직접 진입(기존 내용 보존), 수정 완료 시 LLM 파이프라인(Safety Guard, Narrative Builder, 질문 확률 엔진) 재전송, 3분 1회 수정 제한(Rate Limiting) 구현.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+어르신이 보관된 답변이나 일기를 수정할 때 기존 텍스트가 폼에 보존된 상태로 즉시 수정 가능하도록 하고, 수정된 내용으로 LLM 인생 서사를 다시 재구성하며, 과도한 LLM API 남발 방지를 위해 3분 쿨다운 레이트 리밋을 보장하기 위함.
+
+## Outcome
+
+* **직접 수정 모드 (`app/journal/page.tsx`, `app/daily-diary/page.tsx`)**:
+  - 진입 시 수단 선택 단계를 건너뛰고 `answerType = "text"`로 즉시 텍스트 에디터가 열리며 기존 보관 내용 pre-fill.
+* **LLM 파이프라인 재실행**:
+  - 수정 완료 시 `safetyGuardAgent.verify()` 및 `narrativeBuilderAgent.buildNarratives()` / `/api/questions` LLM 엔드포인트를 재작동하여 서사 나이테 업데이트.
+* **3분 1회 수정 레이트 리밋**:
+  - `localStorage` 기반 타임스탬프 체크로 3분(180,000ms) 이내 수정 재제출 시 남은 카운트다운 시간과 함께 경고 메시지 팝업 노출.
+
+## Files
+
+* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx) (수정)
+* [app/daily-diary/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/daily-diary/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`/learn` 워크플로우 실행을 통한 답변/일기 수정 및 LLM 파이프라인 재연동 핵심 재사용 패턴 추출 및 분석.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Code-Reviewer
+
+## Purpose
+
+최근 개발 진행된 답변/일기 수정 UX 및 LLM 파이프라인 재실행, 쿨다운 레이트 리밋 관련 솔루션을 재사용 가능한 패턴(Pattern & Skill)으로 정형화하고 `aiUsageLog.md`에 이력을 기록하기 위함.
+
+## Outcome
+
+* `/learn` 워크플로우 분석을 통해 LLM 파이프라인 재실행 Cooldown 레이트 리밋 패턴 및 어르신 UX 수정 직행(Bypass) 패턴 2종 추출 완료.
+* 프로젝트 패턴 문서 (`patterns/llm-edit-cooldown-pattern.md`) 및 워크스페이스 스킬 (`.agents/skills/llm-edit-cooldown/SKILL.md`) 생성 저장 완료.
+* AI 사용 및 워크플로우 수행 이력을 `aiUsageLog.md`에 성공적으로 갱신 기록함.
+
+## Files
+
+* [patterns/llm-edit-cooldown-pattern.md](file:///c:/Users/PC/Desktop/Projects/EEUM/patterns/llm-edit-cooldown-pattern.md) (신규)
+* [.agents/skills/llm-edit-cooldown/SKILL.md](file:///c:/Users/PC/Desktop/Projects/EEUM/.agents/skills/llm-edit-cooldown/SKILL.md) (신규)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`/narrative` 서화 보관함 페이지 3단 컬럼 데스크톱 레이아웃(1열 대분류 카테고리 - 2열 세부 태그 & 빈도/정렬 - 3열 카드 뷰어) 리팩토링.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+기존 상단 카테고리 탭 + 1열 스크롤 구조를 데스크톱 환경에 최적화된 3단 탐색 구조로 개편하여 카테고리 및 세부 키워드 빈도별 다차원 회상 탐색 경험을 제공하기 위함.
+
+## Outcome
+
+* `NarrativeClient.tsx`를 3단 컬럼 레이아웃(`w-56` 1열, `w-64` 2열, `flex-1` 3열)으로 전면 리팩토링.
+* 2열 세부 태그 카운트 및 3종 정렬(`빈도순`, `최신순`, `가나다순`) 기능 구현.
+* 카드 UI 및 기존 다크/라이트 테마 가이드 100% 보존.
+* `npx tsc --noEmit` 및 `npm run build` 검증 완료.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+Upstage OCR / Document Parse 및 11개 엔티티 추출(IE) 검증 전용 전용 스크립트 작성 및 테스트 실행.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Tester, Coder
+
+## Purpose
+
+Upstage Document Parse API 키 설정 유무(실제 Cloud API vs Mock Fallback) 및 11개 회상 엔티티 추출 파이프라인(Agent 1 ocr-extractor) 동작을 독립적으로 검증하고 명령어로 실행할 수 있도록 지원함.
+
+## Outcome
+
+* `tests/test-upstage-ocr.ts` 테스트 스크립트 작성 완료.
+* `package.json`에 `npm run test:ocr` 실행 명령어 등록.
+* Upstage 키 감지 및 19개 회상 엔티티 추출 테스트 성공적 수행.
+
+## Files
+
+* [tests/test-upstage-ocr.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-upstage-ocr.ts) (신규)
+* [package.json](file:///c:/Users/PC/Desktop/Projects/EEUM/package.json) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+AI 대화 주제 제안(`custom-topic`) 부가설명/서두 제거 및 사진 첨부 시 사진 판독 맥락 사용자 응답 자동 기록 기능 개편.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+AI 주제 생성 시 서두("안녕하세요", "추천 질문입니다") 및 부가설명을 단 한 단어도 포함하지 않는 순수 개방형 질문 문장으로 다듬고, 사진 첨부 시 OCR/판독 맥락을 사용자의 첫 응답(Answer) 기록으로 자동 저장하여 세대 연결 및 서사 기록의 연속성을 보장함.
+
+## Outcome
+
+* `questionGeneratorAgent.ts`의 `generateCustomTopicQuestion` 및 정제 함수(`cleanQuestion`) 개편: 서두, 머리말, 부가 해설을 제거하고 물음표(`?`)로 끝나는 순수 질문 1개만 생성.
+* `app/custom-topic/page.tsx` 및 `/api/questions/custom/route.ts` 개편: 사진 첨부 시 Upstage OCR 판독 맥락을 `supabaseService.saveAnswer`로 해당 사용자의 첫 응답으로 자동 기록.
+* `npx tsc --noEmit` 및 `npm run test:backend` (19개 테스트 항목 100% 통과) 검증 완료.
+
+## Files
+
+* [lib/agents/question-generator-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/question-generator-agent.ts) (수정)
+* [app/custom-topic/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/custom-topic/page.tsx) (수정)
+* [app/api/questions/custom/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/custom/route.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`public/testdata/ocrtest1.jpg` 실시간 Upstage Document Parse 및 OCR 파싱 검증 테스트 수행.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Tester
+
+## Purpose
+
+실제 샘플 이미지(`ocrtest1.jpg`)를 Upstage Cloud API에 전송하여 손글씨 일기/편지 파싱 텍스트 추출 정확도 및 `upstageService.parseDocument` 엔드포인트 텍스트 파싱 로직을 검증함.
+
+## Outcome
+
+* `public/testdata/ocrtest1.jpg` (67.89 KB) 파싱 성공.
+* 2010년 11월 30일자 "가족발 그리기" 손글씨 일기 전문 추출 완수 (엄마, 아빠, 동생 발에 관한 회상 일기 내용 파싱 성공).
+* `upstage-service.ts` 파싱 텍스트 추출 로직 보완 및 General OCR fallback 파이프라인 구축.
+
+## Files
+
+* [tests/test-upstage-ocr.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-upstage-ocr.ts) (수정)
+* [services/upstage-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/upstage-service.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+연결도 낮은 추억 엔티티(Weak Entity) 통제 확률(15%) 등장 알고리즘 구축 및 질문 생성 엔진 적용.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+자주 언급되는 주요 엔티티뿐만 아니라 언급 빈도나 연결도가 낮은 잊혀진 추억 엔티티(Weak Entity)도 소폭의 통제된 확률(15%)로 질문 타깃에 포함시켜 다각적인 인지 자극 회상 질문을 유도하기 위함.
+
+## Outcome
+
+* `mindmap-analyzer.ts` 내 `selectTargetEntities` 함수 추가: 연결도가 낮은 엔티티(`weakEntities`)를 15% 통제 확률(`weakProbability = 0.15`)로 질문 타깃 엔티티에 확률적 포함.
+* `app/api/questions/route.ts` 질문 생성 API에 `selectTargetEntities` 연동.
+* `tests/test-backend-api.ts` Test 11 추가 및 21개 전체 테스트 항목 100% 통과.
+
+## Files
+
+* [lib/analytics/mindmap-analyzer.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/analytics/mindmap-analyzer.ts) (수정)
+* [app/api/questions/route.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/app/api/questions/route.ts) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`http://localhost:3000/narrative` 3단 레이아웃 1열 카테고리 탭 UI 5대 주요 시각 카테고리(인물, 장소, 시간, 행사/계기, 동물 + 전체) 슬림화 적용.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+음식, 감각, 사물, 감정 등 다른 엔티티 타입은 내부 백엔드 수식 계산/신호 점수(features) 용도로만 보존하고, 사용자 프론트엔드 UI 1열 사이드바 탭에는 어르신과 자녀가 가장 자주 직관적으로 찾아보는 5가지 핵심 카테고리(인물, 장소, 시간, 행사/계기, 동물)만 노출하여 복잡도를 대폭 낮춤.
+
+## Outcome
+
+* `NarrativeClient.tsx`: `CATEGORIES` 탭을 **전체(✨), 인물(👤), 장소(📍), 시간(⏳), 행사/계기(📜), 동물(🐕)** 6종으로 재구성.
+* `classifyItem` 및 `extractTags` 매핑 5대 주요 시각 카테고리로 정리.
+* `npx tsc --noEmit` 및 `npm run test:backend` (21/21 통과) 성공적 완수.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+Upstage Embedding API 기반 의미론적 중복 필터링(Plan A) 및 과거 질문 15개 윈도우 프롬프트 주입(Plan C) 통합 구현.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+질문 생성기(questionGeneratorAgent)가 과거 어르신께 물어보았던 회상 질문과 의미/주제/맥락이 중복되거나 유사한 질문을 재방송하듯 반복 발송하는 문제를 방지하기 위함.
+
+## Outcome
+
+1. **Plan C (15개 히스토리 프롬프트 주입)**: `answersHistory` 참조 범위를 3개에서 **15개**로 확장 및 프롬프트에 중복 금지 지시 강제.
+2. **Plan A (Upstage Solar Embedding + Cosine Similarity)**:
+   - `services/upstage-service.ts`에 `getEmbedding`(`solar-embedding-1-large-query`) 및 `cosineSimilarity` 함수 구현.
+   - 생성된 후보 질문과 최근 15개 과거 질문 간 임베딩 코사인 유사도 계산 (`>= 0.82`인 유사/중복 질문 자동 필터링).
+3. **테스트 검증**: `tests/test-backend-api.ts` Test 12 추가. 실제 Upstage Embedding API 호출 결과 의미상 동일한 질문("어릴 적 마당에서 친구들과 어떤 놀이를 하며 노셨나요?" vs "유년 시절 집 마당에서 친구들과 주로 어떤 놀이를 하셨나요?")의 임베딩 코사인 유사도가 **0.8841**로 측정되어 중복 필터링 작동 검증 완수 (24/24 전체 테스트 100% 통과).
+
+## Files
+
+* [services/upstage-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/upstage-service.ts) (수정)
+* [lib/agents/question-generator-agent.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/lib/agents/question-generator-agent.ts) (수정)
+* [tests/test-backend-api.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/tests/test-backend-api.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`http://localhost:3000/narrative` 모바일 뷰 1열(카테고리) 및 2열(세부 태그) 토글(아코디언) 개폐 반응형 UI 구현.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+모바일 환경에서 1열/2열 사이드바 리스트가 세로로 길게 늘어져 3열 추억 카드 영역까지 도달하기 위해 과도한 스크롤이 발생하는 문제 개선.
+
+## Outcome
+
+* `NarrativeClient.tsx`: `isCategoryOpen`, `isTagOpen` 토글 상태 추가.
+* 모바일 화면(`md:` 미만)에서는 1열/2열 헤더가 현재 선택된 카테고리/태그 배지와 함께 펼치기/접기(`ChevronDown`/`ChevronUp`) 버튼으로 작동하도록 구현.
+* 항목 선택 시 자동으로 아코디언이 접히며 3열 카드로 즉시 접근할 수 있도록 UX 개선.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 검증 완료.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`http://localhost:3000/narrative` 공통 질문 태그 추가(`#공통 질문`), 공통 질문 카드 시각적 차별화(골드/앰버 하이라이트 배경 & `🤝 공통 질문` 배지) 및 작성자 식별 배지(`👴 어르신(본인) 직접 기록` vs `🙋‍♀️ 보호자(자녀) 대리 기록`) 구현.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+세대 간 공통 회상 질문 카드를 어르신 본인의 일반 단독 기록과 시각적으로 명확히 구분하고, 2열 태그 목록에서 `#공통 질문`을 선택하여 세대 연결 추억만 모아볼 수 있도록 UX 개선.
+
+## Outcome
+
+* `NarrativeClient.tsx`:
+  - `allCards` 수집 시 세대 공유 메모리영역(`sharedIndependentMemory`, `inheritedStory`) 및 보호자 대리 입력 건에 대해 `#공통 질문` 태그 자동 추가 및 2열 태그 필터링 연동.
+  - 공통 질문 카드는 앰버/골드 그라데이션 테두리 및 링 하이라이트 배경 적용.
+  - 카드의 작성자 배지(`authorLabel`) 추가: `👴 어르신(본인) 직접 기록` (초록 배지) vs `🙋‍♀️ 보호자(자녀) 대리 기록` (앰버 배지) 명시.
+* `npx tsc --noEmit` 및 `npm run test:backend` (26/26 전체 통과) 완수.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+보호자 자녀 시점 기억 덧붙이기(관점 병기 `mergedAnswers`) & 규칙 §5 기반 2단계 정보 정정 전용 모달 컴포넌트(`GuardianMemoryModal.tsx`) 구축 및 3단 서화 보관함 연동.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+보호자(자녀)가 어르신의 회상 기록 카드에서 자녀 본인 시점의 기억을 한 줄 덧붙여 세대 연결 카드(`mergedAnswers`)로 결합하거나, 장소/연도 등 잘못 기재된 정보를 프로젝트 UI 규칙 §5 (1단계: 맞아요/틀려요 → 2단계: 단일 텍스트 입력창)에 맞춰 직관적으로 정정할 수 있도록 지원함.
+
+## Outcome
+
+* `components/GuardianMemoryModal.tsx` 컴포넌트 신규 작성:
+  - 1단계 모드 선택: 🤝 "자녀 시점 기억 덧붙이기 (관점 병기)" vs ✏️ "2단계 정보 정정"
+  - 자녀 기억 작성 시 `saveAnswer`(`by_guardian: true`) 및 `addMockGuardianNarrative` 자동 호출로 관점 병기 카드 업데이트.
+  - 정보 정정 시 1단계(맞아요/틀려요) → 2단계(단일 텍스트 입력창) 2단계 흐름 충실히 이행.
+* `NarrativeClient.tsx`: 각 추억 카드 하단에 `🤝 자녀 기억 덧붙이기 / 2단계 정정` 버튼 추가 및 모달 연동.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 완료.
+
+## Files
+
+* [components/GuardianMemoryModal.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/components/GuardianMemoryModal.tsx) (신규)
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+1. `http://localhost:3000/narrative` 카드 상단 라인 1(질문 유형/카테고리/작성자/날짜)과 라인 2(세부 태그 `#어머니`, `#봄소풍`) 분리 렌더링.
+2. Supabase DB `answers` 테이블 스키마에 존재하지 않는 `memory_zone` 컬럼 페이로드 전송으로 인한 `saveAnswer` 오류 원인 해결 및 안전한 `questions_history` pre-upsert 파이프라인 구축.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+1. 카드 헤더의 질문 종류 배지(`🤝 공통 질문`, `✨ 인물`)와 세부 엔티티 태그(`#어머니`, `#소풍`)가 한 줄에 뒤섞여 복잡했던 UI 레이아웃을 2줄로 시각적 분리.
+2. 실환경 Supabase 연결 시 DB 스키마 캐시 불일치 에러(`PGRST204: Could not find the 'memory_zone' column of 'answers'`)를 해결하여 답변 정정 및 저장 시 100% 안정적 저장 보장.
+
+## Outcome
+
+* `NarrativeClient.tsx`: 카드 헤더를 라인 1(배지 + 작성자/날짜)과 라인 2(세부 태그)로 깔끔하게 2줄 배치.
+* `services/supabase-service.ts`: `saveAnswer`에서 `answers` 테이블 페이로드 내 `memory_zone` 제외 및 `questions_history` 외래키 자동 보장 파이프라인 구축.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 검증 완료.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [services/supabase-service.ts](file:///c:/Users/PC/Desktop/Projects/EEUM/services/supabase-service.ts) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+사용자 지시에 따른 보호자 대리 기록/정정 모달(`GuardianMemoryModal.tsx`) 기능 제거 및 3단 서화 보관함 UI 원복.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+사용자의 기능 제거 지시에 따라 복잡도를 유발하는 `GuardianMemoryModal` 컴포넌트 및 추억 카드 하단 정정/덧붙이기 버튼을 완전히 제거하고 코드를 깔끔하게 원복함.
+
+## Outcome
+
+* `components/GuardianMemoryModal.tsx` 파일 삭제.
+* `NarrativeClient.tsx`에서 `GuardianMemoryModal` 임포트, 모달 상태 및 버튼 JSX 제거.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 검증 완료.
+
+## Files
+
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+빛바랜 추억 사진첩(`/album`) 페이지 구축 — 사진 갤러리 그리드 및 사진별 상세 회상 수필 라이트박스 모달 연동.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Architect, Coder
+
+## Purpose
+
+어르신과 자녀가 빛바랜 옛 앨범 사진과 일상 일기 사진들을 시각적인 갤러리로 둘러보고, 개별 사진을 터치 시 사진에 담긴 소중한 회상 질문 및 답변 수필 전체, 엔티티 태그, 기록 출처를 직관적으로 확인할 수 있도록 사진 중심의 회상 UX를 지원함.
+
+## Outcome
+
+* `app/album/page.tsx` & `app/album/AlbumClient.tsx` 신규 작성:
+  - 갤러리 그리드: 호버 줌 효과, 촬영일 배지, 질문 제목 및 답변 요약 카드.
+  - 필터 탭: ✨ 전체 사진 / 📷 옛 앨범 & OCR 사진 / 📔 일상 일기 사진.
+  - 라이트박스 모달: 대형 사진 원본 + 질문 제목, 회상 수필 전문, 인물/장소/사건 엔티티 태그.
+* `app/home/page.tsx`: 메인 서랍 타일 목록에 `📸 추억 사진첩` 네비게이션 타일 추가.
+* `app/narrative/NarrativeClient.tsx`: 상단 헤더에 `📸 추억 사진첩 보기` 퀵 링크 추가.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 검증 완료.
+
+## Files
+
+* [app/album/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/album/page.tsx) (신규)
+* [app/album/AlbumClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/album/AlbumClient.tsx) (신규)
+* [app/narrative/NarrativeClient.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/narrative/NarrativeClient.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-02
+
+## Task
+
+`http://localhost:3000/home` 홈 화면 레이아웃 조정 — `대화 주제 제안` 및 `11 카테고리 뷰어 (내 추억 보관함)` 2열 그리드 **바로 아래**에 `📸 추억 사진첩` 전용 와이드 배너 카드로 배치.
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder
+
+## Purpose
+
+3열 그리드로 복잡하게 묶여 있던 타일 배치를 사용자의 의도에 맞춰 1행(`대화 주제 제안` + `내 추억 보관함`) 및 2행(`📸 추억 사진첩` 전용 배너)으로 시각적 위계감을 분리하여 접근성을 극대화함.
+
+## Outcome
+
+* `app/home/page.tsx`:
+  - 본인 모드 및 보호자 모드 공통으로 1행 2열 그리드(`대화 주제 제안` & `11-카테고리 뷰어`) 직후에 2행 전용 와이드 배너(`📸 추억 사진첩`) 배치.
+  - 초록색 에메랄드 은은한 그라데이션 및 `ImageIcon` 아이콘 적용.
+* `npx tsc --noEmit` 및 `npm run test:backend` (24/24 통과) 검증 완료.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
+
+---
+
+## Date
+
+2026-08-03
+
+## AI Tool
+
+Antigravity
+
+## Agent
+
+Planner, Coder, Architect
+
+## Purpose
+
+`/custom-topic` 지면에서 신규 추억 대화 주제 생성 후 홈 화면(`/home`)으로 이동했을 때, 질문 컨테이너 카드가 생성 및 표시되지 않던 데이터 동기화 및 폴백 처리 버그 수정.
+
+## Outcome
+
+* `services/supabase-service.ts`:
+  - `getCustomProposedQuestions`: Supabase 응답이 없거나 에러/빈 배열인 경우, 로컬 스토리지(`eeum_mock_proposed_questions`) 및 `questions_history`에서 `pending` 상태의 사용자 제안 질문을 통합/폴백하여 최신순으로 반환하도록 보강.
+  - `saveCustomProposedQuestion`: 로컬 스토리지와 함께 Supabase 핵심 스키마 테이블인 `questions_history`에도 `status: "pending"`, `shared: true`로 동시 upsert하여 데이터 일관성 확보.
+  - `saveAnswer`: 질문 검색 대상(`existingQ`)을 `MOCK_KEYS.QUESTIONS`와 `MOCK_KEYS.PROPOSED_QUESTIONS` 모두 포함하도록 확장하여 사진 OCR 제안 시 질문 상태가 `"answered"`로 잘못 승격되는 현상 방지.
+* `app/home/page.tsx`:
+  - `loadData`: 당일(`YYYY-MM-DD`) 생성된 질문이 있는 경우 답변 작성 여부와 관계없이 당일 공통 미션 질문(`todayQuestion`)으로 유지하도록 개편하여, 1인 답변 시 AI 질문 생성기가 무한히 새 질문을 연속 생성하여 다른 질문으로 즉시 전환되던 현상을 차단.
+* `app/journal/page.tsx`:
+  - `handleSubmitAnswer`: 세대 연결 공통 질문(`shared: true`) 답변 작성 시 어르신과 보호자 양쪽 모두의 답변이 완료(또는 2인 매듭 연결)되었을 때만 질문 상태를 `"answered"`로 완료 처리.
+  - 한쪽만 먼저 작성한 경우 질문 상태를 `"pending"`("세대 매듭 연결 중 ✦")으로 유지하여, 상대방이 홈 화면에서 2인 공통 질문 카드를 확인하고 답변을 이어서 작성할 수 있도록 조율.
+* `npm run build` 컴파일 검증 완결.
+
+## Files
+
+* [app/home/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/home/page.tsx) (수정)
+* [app/journal/page.tsx](file:///c:/Users/PC/Desktop/Projects/EEUM/app/journal/page.tsx) (수정)
+* [aiUsageLog.md](file:///c:/Users/PC/Desktop/Projects/EEUM/aiUsageLog.md) (수정)
