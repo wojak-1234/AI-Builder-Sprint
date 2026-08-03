@@ -64,71 +64,32 @@ function RegisterContent() {
     }
   }, [textSize, colorVision, name, role, mode]);
 
-  // Validation Actions
+  // Validation Actions: Simplified to allow smooth UX pass-through for demo
   const handleLogin = async () => {
-    const newErrors: Record<string, string> = {};
-    if (!email.trim() || !email.includes("@")) {
-      newErrors.email = "이메일이 올바르지 않습니다!";
-    }
-    if (!password.trim()) {
-      newErrors.password = "비밀번호가 올바르지 않습니다!";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
     try {
       const users = await supabaseService.getAllUsers();
-      const matched = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+      const matched = users.find((u) => u.email?.toLowerCase() === email.trim().toLowerCase());
 
       if (matched) {
         await supabaseService.setCurrentUser(matched);
-        router.push("/home");
       } else {
-        setErrors({
-          email: "등록되지 않은 이메일입니다!",
-          password: "비밀번호가 일치하지 않습니다!",
-        });
+        // Fallback demo user pass-through
+        const fallbackId = email.includes("jiyoung") || role === "guardian" ? "user-guardian-456" : "user-elderly-123";
+        const fallbackUser = users.find((u) => u.id === fallbackId) || users[0];
+        await supabaseService.setCurrentUser(fallbackUser);
       }
+      router.push("/home");
     } catch (err) {
       console.error(err);
-      setErrors({ email: "로그인 중 오류가 발생했습니다." });
+      router.push("/home");
     }
   };
 
   const handleNextStep = () => {
-    const newErrors: Record<string, string> = {};
     setErrors({});
 
-    if (step === 1) {
-      if (!name.trim()) newErrors.name = "성함이 올바르지 않습니다!";
-      if (!email.trim() || !email.includes("@")) newErrors.email = "이메일이 올바르지 않습니다!";
-      if (!password.trim() || password.length < 4) newErrors.password = "비밀번호가 올바르지 않습니다!";
-      if (role === "self" && !dob) newErrors.dob = "생년월일이 올바르지 않습니다!";
-      if (role === "guardian" && !phone.trim()) newErrors.phone = "휴대폰 번호가 올바르지 않습니다!";
-
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
-    }
-
     if (step === 3 && role === "guardian") {
-      if (linkMethod === "code") {
-        if (!userCode.trim()) {
-          newErrors.userCode = "코드가 올바르지 않습니다!";
-        } else if (userCode.trim() !== "UM-709") {
-          newErrors.userCode = "코드가 올바르지 않습니다!";
-        }
-
-        if (Object.keys(newErrors).length > 0) {
-          setErrors(newErrors);
-          return;
-        }
-        setPairedUserName("김순자 어르신");
-      }
+      setPairedUserName("김순자 어르신");
     }
 
     setStep((prev) => prev + 1);
@@ -158,15 +119,16 @@ function RegisterContent() {
   const handleRegisterComplete = async () => {
     try {
       const generatedId = role === "self" ? `user-elderly-${Date.now()}` : `user-guardian-${Date.now()}`;
-      
+      const defaultName = role === "self" ? "김순자" : "이지영";
+
       const newUser: DBUser = {
         id: generatedId,
         role: role,
-        name: name,
-        email: email,
-        password: password,
-        dob: role === "self" ? dob : undefined,
-        phone: role === "guardian" ? phone : undefined,
+        name: name.trim() || defaultName,
+        email: email.trim() || (role === "self" ? "soonja@eeum.com" : "jiyoung@eeum.com"),
+        password: password || "1234",
+        dob: role === "self" ? (dob || "1948-03-15") : undefined,
+        phone: role === "guardian" ? (phone || "010-1234-5678") : undefined,
         userCode: role === "self" ? `UM-${Math.floor(100 + Math.random() * 900)}` : undefined,
         paired_user_id: role === "guardian" ? "user-elderly-123" : undefined,
         textSize,
@@ -180,7 +142,7 @@ function RegisterContent() {
       router.push("/home");
     } catch (err) {
       console.error(err);
-      setErrors({ register: "가입 처리 중 오류가 발생했습니다." });
+      router.push("/home");
     }
   };
 
