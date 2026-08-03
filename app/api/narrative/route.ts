@@ -15,22 +15,38 @@ export async function POST(req: NextRequest) {
     // Agent 3 (narrative-builder 4-stage relay)
     const result = await narrativeBuilderAgent.buildNarratives(userId, answers);
 
-    // Mandatory Safety Guard check on fullNarrativeText (Agent 4)
-    const guardResult = await safetyGuardAgent.verify(result.fullNarrativeText);
-
-    if (!guardResult.passed) {
-      console.warn("Narrative text failed Safety Guard checklist:", guardResult.violations);
+    // Mandatory Safety Guard check (Agent 4) — verified PER CHAPTER, not just on the
+    // concatenated text, so a violation in one chapter can't slip through by being diluted
+    // across the full narrative. Any chapter that fails is replaced, never shipped as-is.
+    const violatedChapters: string[] = [];
+    const verifiedNarratives = [];
+    for (const narrative of result.narratives) {
+      const chapterGuard = await safetyGuardAgent.verify(narrative.content);
+      if (chapterGuard.passed) {
+        verifiedNarratives.push(narrative);
+      } else {
+        console.warn(`Narrative chapter "${narrative.title}" failed Safety Guard checklist:`, chapterGuard.violations);
+        violatedChapters.push(narrative.title);
+        verifiedNarratives.push({
+          ...narrative,
+          content: "이 시기의 기억은 다정하게 다시 정리하는 중입니다. 다음 회상 때 이어가 볼게요.",
+        });
+      }
     }
+    const verifiedFullNarrativeText = verifiedNarratives
+      .map((n) => `\n\n### ${n.title} (${n.event_date.substring(0, 4)})\n${n.content}`)
+      .join("")
+      .trim();
 
     // Dynamically extract real entities from user answers using Agent 1 (ocrExtractorAgent)
     const extractedEntities = await ocrExtractorAgent.extractFromAnswers(answers);
-    const analytics = analyzeMindmap(extractedEntities, answers, result.narratives);
+    const analytics = analyzeMindmap(extractedEntities, answers, verifiedNarratives);
 
     return NextResponse.json({
       success: true,
-      narratives: result.narratives,
-      fullNarrativeText: result.fullNarrativeText,
-      safetyCheck: guardResult,
+      narratives: verifiedNarratives,
+      fullNarrativeText: verifiedFullNarrativeText,
+      safetyCheck: { passed: violatedChapters.length === 0, violatedChapters },
       analytics: {
         weakEntities: analytics.weakEntities,
         nodeSizes: analytics.nodeSizes,

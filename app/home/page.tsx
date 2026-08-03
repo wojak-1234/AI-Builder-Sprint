@@ -79,9 +79,14 @@ function HomeContent() {
         const questions = await supabaseService.getQuestions(elderlyId);
         const virtualTodayStr = supabaseService.getVirtualTodayString();
 
+        // Deterministic per-user-per-day id: makes "today's auto question" idempotent so
+        // concurrent/repeated loads (two tabs, fast reloads, etc.) can never create duplicates —
+        // addQuestion() upserts by id instead of inserting a new row every time.
+        const autoQId = `q-auto-${elderlyId}-${virtualTodayStr}`;
+
         // Rule: A NEW daily reminiscence question MUST be generated & set for EVERY DAY
-        // Find question created specifically on virtualTodayStr
-        let todayQ = questions.find((q) => {
+        // Prefer the deterministic id match; fall back to date-parsing for legacy random-id rows.
+        let todayQ = questions.find((q) => q.id === autoQId) || questions.find((q) => {
           const qDate = toLocalDateString(q.created_at);
           const isCustom = q.id.startsWith("q-custom-") || q.created_by;
           return qDate === virtualTodayStr && !isCustom;
@@ -102,7 +107,7 @@ function HomeContent() {
               const virtualNow = new Date(Date.now() + offsetDays * 86400000).toISOString();
 
               const autoQ: DBQuestionHistory = {
-                id: `q-${Date.now()}`,
+                id: autoQId,
                 user_id: elderlyId,
                 question_text: apiJson.questions[0],
                 created_at: virtualNow,

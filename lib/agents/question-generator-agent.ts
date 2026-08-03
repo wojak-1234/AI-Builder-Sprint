@@ -121,7 +121,6 @@ ${historyStr}
                   const pastEmbedding = await upstageService.getEmbedding(pastQ);
                   const sim = upstageService.cosineSimilarity(candidateEmbedding, pastEmbedding);
                   if (sim >= 0.82) {
-                    console.log(`[Plan A Vector Deduplication] Filtered out duplicate question (sim: ${sim}): "${candidateQ}" vs past "${pastQ}"`);
                     isDuplicate = true;
                     break;
                   }

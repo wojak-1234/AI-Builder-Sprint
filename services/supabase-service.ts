@@ -325,10 +325,16 @@ export const supabaseService = {
       return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     const client = getSupabaseClient()!;
+    // Scoped strictly to this elder's own row — every question is written with
+    // user_id = the elder's id regardless of who authored it, so this is already
+    // correct for both self and paired-guardian callers (they both resolve to the
+    // same elderlyId before calling). Do NOT OR in a hardcoded id or a bare
+    // shared.eq.true here — that previously leaked every family's shared questions
+    // (and one specific demo user's data) to every caller.
     const { data } = await client
       .from("questions_history")
       .select("*")
-      .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     return (data as DBQuestionHistory[]) || [];
   },
@@ -461,7 +467,7 @@ export const supabaseService = {
       const { data, error } = await client
         .from("custom_proposed_questions")
         .select("*")
-        .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (!error && data && data.length > 0) {
         (data as DBQuestionHistory[]).forEach((q) => uniqueMap.set(q.id, q));
@@ -475,7 +481,7 @@ export const supabaseService = {
       const { data: qhData } = await client
         .from("questions_history")
         .select("*")
-        .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,shared.eq.true`)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (qhData && qhData.length > 0) {
         const customQh = (qhData as DBQuestionHistory[]).filter((q) => q.id.startsWith("q-custom-") || q.created_by);
@@ -575,17 +581,20 @@ export const supabaseService = {
       return answers.filter((a) => !a.is_private || a.user_id === userId || a.user_id === "user-elderly-123");
     }
     const client = getSupabaseClient()!;
+    // Scoped strictly to this elder's own row (see getQuestions above for why this is
+    // correct for both self and guardian callers). The previous is_private.eq.false OR
+    // clause leaked every non-private answer from every family; that's not this elder's
+    // to see.
     const { data } = await client
       .from("answers")
       .select("*")
-      .or(`user_id.eq.${userId},user_id.eq.user-elderly-123,is_private.eq.false`)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     return (data as DBAnswer[]) || [];
   },
 
   saveAnswer: async (answer: DBAnswer): Promise<void> => {
     if (isMockMode()) {
-      console.log("   [Mock DB] Saving Answer to Local/In-Memory store:", answer.id);
       const answers = getLocalStorageItem<DBAnswer[]>(MOCK_KEYS.ANSWERS, []);
       let idx = answers.findIndex((a) => a.id === answer.id);
 
@@ -607,7 +616,6 @@ export const supabaseService = {
       setLocalStorageItem(MOCK_KEYS.ANSWERS, answers);
       return;
     }
-    console.log("   [Real Supabase] Saving Answer to Table 'answers':", answer.id);
     const client = getSupabaseClient()!;
 
     // Clean payload for Supabase database table schema (answers table)
@@ -733,11 +741,9 @@ export const supabaseService = {
     setLocalStorageItem(MOCK_KEYS.NARRATIVES, narratives);
 
     if (isMockMode()) {
-      console.log("   [Mock DB] Saved Narrative to Local/In-Memory store:", narrative.id);
       return;
     }
 
-    console.log("   [Real Supabase] Saving Narrative to Table 'narratives':", narrative.id);
     try {
       const client = getSupabaseClient()!;
       
