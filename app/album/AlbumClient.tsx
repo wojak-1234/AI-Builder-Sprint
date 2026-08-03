@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { supabaseService, DBAnswer, DBDailyDiary, DBUser } from "@/services/supabase-service";
 import { ArrowLeft, Image as ImageIcon, Calendar, Tag, BookOpen, X, Heart, Sparkles, User, Layers, Filter } from "lucide-react";
+import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
+import { normalizeTimePeriod } from "@/services/upstage-service";
 
 type AlbumItem = {
   id: string;
@@ -28,7 +30,7 @@ const SAMPLE_ALBUM_ITEMS: AlbumItem[] = [
     imageUrl: "/testdata/ocrtest1.jpg",
     date: "1972-08-15",
     byGuardian: false,
-    tags: ["인물:선우", "장소:마당", "행사:돌잔치", "시기:1972년"],
+    tags: ["인물:선우", "장소:마당", "행사:돌잔치", "시기:1970년대"],
     memoryZone: "sharedIndependentMemory",
   },
   {
@@ -39,7 +41,7 @@ const SAMPLE_ALBUM_ITEMS: AlbumItem[] = [
     imageUrl: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800&auto=format&fit=crop",
     date: "1978-10-04",
     byGuardian: false,
-    tags: ["동물:바둑이", "장소:들판", "시기:1978년", "감정:행복"],
+    tags: ["동물:바둑이", "장소:들판", "시기:1970년대", "감정:행복"],
     memoryZone: "soloPatientOnly",
   },
   {
@@ -50,7 +52,7 @@ const SAMPLE_ALBUM_ITEMS: AlbumItem[] = [
     imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop",
     date: "1982-05-12",
     byGuardian: true,
-    tags: ["음식:분홍소시지", "장소:소풍길", "인물:어머니", "행사:봄소풍"],
+    tags: ["음식:분홍소시지", "장소:소풍길", "인물:어머니", "행사:봄소풍", "시기:1980년대"],
     memoryZone: "inheritedStory",
   },
   {
@@ -61,7 +63,7 @@ const SAMPLE_ALBUM_ITEMS: AlbumItem[] = [
     imageUrl: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=800&auto=format&fit=crop",
     date: "1964-09-20",
     byGuardian: false,
-    tags: ["장소:고향기와집", "사물:감나무", "인물:언니들", "감각:따스한햇살"],
+    tags: ["장소:고향기와집", "사물:감나무", "인물:언니들", "감각:따스한햇살", "시기:1960년대"],
     memoryZone: "sharedIndependentMemory",
   },
 ];
@@ -87,16 +89,71 @@ export default function AlbumClient() {
             ? currUser.id
             : currUser?.paired_user_id || "user-elderly-123";
 
-        const [answers, diaries] = await Promise.all([
+        const [answers, diaries, customProposed] = await Promise.all([
           supabaseService.getAnswers(elderlyId),
           supabaseService.getRecentDailyDiaries(elderlyId),
+          supabaseService.getCustomProposedQuestions(elderlyId),
         ]);
 
         const fetchedItems: AlbumItem[] = [];
 
+        // Helper to parse AI entities dynamically from user title & description
+        const extractAiTags = async (textToParse: string, baseTags: string[]): Promise<string[]> => {
+          if (!textToParse.trim()) return baseTags;
+          try {
+            const res = await ocrExtractorAgent.extract(textToParse);
+            const prefixMap: Record<string, string> = {
+              person: "인물",
+              place: "장소",
+              event: "사건",
+              occasion: "행사",
+              time_period: "시기",
+              food: "음식",
+              activity: "활동",
+              animal: "동물",
+              emotion: "감정",
+              sensory: "감각",
+              object: "사물",
+            };
+
+            const dynamicTags = res.entities.map((e) => {
+              const prefix = prefixMap[e.type] || "태그";
+              const normalizedVal = e.type === "time_period" ? normalizeTimePeriod(e.value) : e.value;
+              return `${prefix}:${normalizedVal}`;
+            });
+
+            return Array.from(new Set([...baseTags, ...dynamicTags]));
+          } catch {
+            return baseTags;
+          }
+        };
+
+        // Add custom proposed questions with photos
+        for (const cq of customProposed) {
+          if (cq.custom_image_url) {
+            const titleAndDesc = `${cq.question_text || ""} ${cq.created_by === "guardian" ? "자녀 대화주제 제안 사진" : "어르신 대화주제 제안 사진"}`;
+            const tags = await extractAiTags(titleAndDesc, ["추억사진", cq.created_by === "guardian" ? "자녀제안" : "어르신제안"]);
+            fetchedItems.push({
+              id: cq.id,
+              type: "ocr",
+              title: cq.question_text,
+              answerText:
+                cq.created_by === "guardian"
+                  ? "🙋‍♀️ 자녀(보호자)가 제안한 추억 사진 및 대화 주제입니다."
+                  : "👴 어르신이 직접 등록하신 추억 사진 및 대화 주제입니다.",
+              imageUrl: cq.custom_image_url,
+              date: (cq.created_at || new Date().toISOString()).substring(0, 10),
+              byGuardian: cq.created_by === "guardian",
+              tags,
+            });
+          }
+        }
+
         // Add real answers with media photos
-        answers.forEach((a) => {
+        for (const a of answers) {
           if (a.media_url || a.answer_text.includes("사진")) {
+            const titleAndAnswer = `${a.question_text || ""} ${a.answer_text || ""}`;
+            const tags = await extractAiTags(titleAndAnswer, ["옛사진", a.by_guardian ? "보호자대리" : "본인기록"]);
             fetchedItems.push({
               id: a.id,
               type: "ocr",
@@ -105,15 +162,17 @@ export default function AlbumClient() {
               imageUrl: a.media_url || "/testdata/ocrtest1.jpg",
               date: a.created_at.substring(0, 10),
               byGuardian: a.by_guardian,
-              tags: ["옛사진", a.by_guardian ? "보호자대리" : "본인기록"],
+              tags,
               memoryZone: a.memory_zone,
             });
           }
-        });
+        }
 
         // Add real daily diaries with photos
-        diaries.forEach((d) => {
+        for (const d of diaries) {
           if (d.photo_url) {
+            const titleAndContent = `오늘의 일상 일기 ${d.content || ""}`;
+            const tags = await extractAiTags(titleAndContent, ["일상일기", d.mood || "평온함"]);
             fetchedItems.push({
               id: d.id,
               type: "diary",
@@ -122,10 +181,10 @@ export default function AlbumClient() {
               imageUrl: d.photo_url,
               date: d.event_date || d.created_at.substring(0, 10),
               byGuardian: false,
-              tags: ["일상일기", d.mood || "평온함"],
+              tags,
             });
           }
-        });
+        }
 
         // Merge fetched real items with rich sample items for complete demonstration
         const combined = [...fetchedItems, ...SAMPLE_ALBUM_ITEMS];
@@ -155,7 +214,7 @@ export default function AlbumClient() {
       <header className="w-full max-w-7xl mx-auto flex items-center justify-between mb-6 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
         >
           <ArrowLeft size={16} />
           서랍으로

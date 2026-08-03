@@ -116,12 +116,16 @@ export default function CustomTopicPage() {
     setIsRecording(true);
   };
 
-  // Image File selection
+  // Image File selection — convert to base64 DataURL immediately so it persists across page navigations
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setOcrFile(file);
-      setOcrPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onload = () => {
+        setOcrPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
       setError(null);
     }
   };
@@ -198,9 +202,25 @@ export default function CustomTopicPage() {
 
       if (inputType === "ocr" && ocrFile) {
         setLoadingMsg("옛 사진 속 글씨와 맥락을 파악하고 있어요...");
-        const parseRes = await upstageService.parseDocument(ocrFile);
-        const ocrText = parseRes?.text ? parseRes.text.trim() : "";
-        
+        let ocrText = "";
+        try {
+          const formData = new FormData();
+          formData.append("file", ocrFile);
+          const ocrRes = await fetch("/api/ocr", {
+            method: "POST",
+            body: formData,
+          });
+          const ocrJson = await ocrRes.json();
+          if (ocrJson.success && ocrJson.data?.text) {
+            ocrText = ocrJson.data.text.trim();
+            if (Array.isArray(ocrJson.data.entities)) {
+              extractedEntities = ocrJson.data.entities;
+            }
+          }
+        } catch (e) {
+          console.error("OCR API error:", e);
+        }
+
         // Combine photo description with OCR text if both exist
         const descText = photoDescription.trim();
         if (descText && ocrText) {
@@ -213,45 +233,59 @@ export default function CustomTopicPage() {
           photoContextStr = "옛 앨범 사진 및 편지 스캔본 기록";
         }
 
-        const ocrExtracted = await ocrExtractorAgent.extract(photoContextStr);
-        extractedEntities = ocrExtracted.entities;
         rawInputText = photoContextStr;
       }
 
       setLoadingMsg("제시해주신 상황 및 사진 맥락을 바탕으로 부가설명 없는 회상 질문을 다듬고 있어요...");
-      const generated = await questionGeneratorAgent.generateCustomTopicQuestion(
-        rawInputText,
-        extractedEntities,
-        role
-      );
+      
+      let generatedQText = "";
+      let isShared = role === "guardian";
+
+      try {
+        const customRes = await fetch("/api/questions/custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            textHint: rawInputText,
+            creatorRole: role,
+          }),
+        });
+        const customJson = await customRes.json();
+        if (customJson.success && customJson.qtext) {
+          generatedQText = customJson.qtext;
+          isShared = customJson.shared ?? isShared;
+        }
+      } catch (e) {
+        console.error("API /api/questions/custom error:", e);
+      }
+
+      if (!generatedQText) {
+        const generated = await questionGeneratorAgent.generateCustomTopicQuestion(
+          rawInputText,
+          extractedEntities,
+          role
+        );
+        generatedQText = generated.question;
+      }
 
       const elderlyId = user?.role === "self" ? userId : user?.paired_user_id || "user-elderly-123";
       const qId = `q-custom-${Date.now()}`;
 
-      let customImgDataUrl: string | undefined = undefined;
-      if (inputType === "ocr" && ocrFile) {
-        try {
-          customImgDataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = (err) => reject(err);
-            reader.readAsDataURL(ocrFile);
-          });
-        } catch {
-          customImgDataUrl = ocrPreview || undefined;
-        }
-      }
+      // ocrPreview is already a base64 DataURL (set during handleFileChange)
+      // Use it directly regardless of inputType — image is optional for all input modes
+      const customImgDataUrl: string | undefined = ocrPreview || undefined;
 
       // Save custom question as a NEW item to custom_proposed_questions table with status "pending"
       await supabaseService.saveCustomProposedQuestion({
         id: qId,
         user_id: elderlyId,
-        question_text: generated.question,
+        question_text: generatedQText,
         created_at: new Date().toISOString(),
         status: "pending",
-        shared: true,
+        shared: isShared,
         created_by: role,
-        custom_image_url: customImgDataUrl || ocrPreview || undefined,
+        custom_image_url: customImgDataUrl,
       });
 
       router.push("/home");
@@ -269,14 +303,14 @@ export default function CustomTopicPage() {
       <header className="w-full max-w-lg mx-auto flex items-center justify-between mb-8 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
         >
           <ArrowLeft size={16} />
           서랍으로
         </button>
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          <span className="text-zinc-500 font-serif text-xs block select-none">
+          <span className="text-muted-foreground font-serif text-xs block select-none">
             추억 주제 제안
           </span>
         </div>

@@ -26,7 +26,9 @@ export const solarService = {
     const apiKey = getApiKey();
 
     if (!apiKey) {
-      console.warn("UPSTAGE_API_KEY is missing. Using Solar fallback generator.");
+      if (typeof window === "undefined") {
+        console.warn("UPSTAGE_API_KEY is missing. Using Solar fallback generator.");
+      }
       return "";
     }
 

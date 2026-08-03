@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF8F5", // Soft cream paper tone (will dynamically adjust in browser via CSS variables)
+  themeColor: "#1D1C1A", // Dark mode background theme color
   width: "device-width",
   initialScale: 1,
 };
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${notoSerifKr.variable} ${notoSansKr.variable} h-full antialiased`}
+      className={`dark ${notoSerifKr.variable} ${notoSansKr.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col bg-background text-foreground antialiased font-sans">
         <ThemeProvider>

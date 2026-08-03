@@ -9,7 +9,7 @@ import CalendarWidget from "@/components/CalendarWidget";
 import DayDetailModal from "@/components/DayDetailModal";
 import { supabaseService, DBUser, DBQuestionHistory, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 import { questionGeneratorAgent } from "@/lib/agents/question-generator-agent";
-import { BookOpen, User, RotateCcw, MessageSquarePlus, Activity, Flame, Sparkles, Edit3, Sun, Check, FastForward } from "lucide-react";
+import { BookOpen, User, Users, RotateCcw, MessageSquarePlus, Activity, Flame, Lightbulb, Edit3, Sun, ArrowRight, FastForward, Image as ImageIcon } from "lucide-react";
 
 function HomeContent() {
   const router = useRouter();
@@ -84,23 +84,34 @@ function HomeContent() {
           return qDate === virtualTodayStr && !isCustom;
         });
 
-        // If no question exists specifically for virtualTodayStr, ALWAYS generate a fresh new curated question!
+        // If no question exists specifically for virtualTodayStr, ALWAYS generate a fresh new curated question via server API!
         if (!todayQ) {
-          const newQs = await questionGeneratorAgent.generateQuestions([], allAnswers, true);
-          if (newQs.questions && newQs.questions.length > 0) {
-            const offsetDays = supabaseService.getVirtualDateOffset();
-            const virtualNow = new Date(Date.now() + offsetDays * 86400000).toISOString();
+          try {
+            const apiRes = await fetch("/api/questions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: elderlyId, isShared: true }),
+            });
+            const apiJson = await apiRes.json();
+            if (apiJson.success && apiJson.questions && apiJson.questions.length > 0) {
+              // Server can't access localStorage/virtualDate, so we save with correct virtual date here on client
+              const offsetDays = supabaseService.getVirtualDateOffset();
+              const virtualNow = new Date(Date.now() + offsetDays * 86400000).toISOString();
 
-            const autoQ: DBQuestionHistory = {
-              id: `q-${Date.now()}`,
-              user_id: elderlyId,
-              question_text: newQs.questions[0],
-              created_at: virtualNow,
-              status: "pending",
-              shared: true
-            };
-            await supabaseService.addQuestion(autoQ);
-            todayQ = autoQ;
+              const autoQ: DBQuestionHistory = {
+                id: `q-${Date.now()}`,
+                user_id: elderlyId,
+                question_text: apiJson.questions[0],
+                created_at: virtualNow,
+                status: "pending",
+                shared: true,
+                memory_zone: apiJson.memoryZone || "sharedIndependentMemory",
+              };
+              await supabaseService.addQuestion(autoQ);
+              todayQ = autoQ;
+            }
+          } catch (apiErr) {
+            console.error("Error generating question via server API:", apiErr);
           }
         }
 
@@ -197,7 +208,7 @@ function HomeContent() {
   const handleSkipOneDay = () => {
     supabaseService.skipOneDay();
     const nextVirtualToday = supabaseService.getVirtualTodayString();
-    alert(`[Judge/Demo] 시스템 날짜가 하루 앞으로 진행되었습니다 ⏩\n(현재 가상 데모 날짜: ${nextVirtualToday})`);
+    alert(`[Judge/Demo] 시스템 날짜가 하루 앞으로 진행되었습니다\n(현재 가상 데모 날짜: ${nextVirtualToday})`);
     window.location.reload();
   };
 
@@ -302,40 +313,81 @@ function HomeContent() {
             (a) => (a.question_id === todayQuestion?.id || a.question_text === todayQuestion?.question_text) && a.by_guardian
           );
 
+          // Calculate whether ALL active containers on home have been answered by current user
+          const rawActiveQs: DBQuestionHistory[] = [];
+          if (todayQuestion) rawActiveQs.push(todayQuestion);
+          if (customProposedQuestions && customProposedQuestions.length > 0) {
+            rawActiveQs.push(...customProposedQuestions);
+          }
+
+          const virtualTodayStr = supabaseService.getVirtualTodayString();
+          const allActiveQs = rawActiveQs.filter((qItem) => {
+            const eAns = answers.find(
+              (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && !a.by_guardian
+            );
+            const gAns = answers.find(
+              (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian
+            );
+
+            const isBothAnswered = Boolean(eAns && gAns);
+            if (isBothAnswered) {
+              const latestAnsDateStr = eAns!.created_at > gAns!.created_at
+                ? toLocalDateString(eAns!.created_at)
+                : toLocalDateString(gAns!.created_at);
+              const qDate = toLocalDateString(qItem.created_at);
+              const lastCompletedDate = latestAnsDateStr > qDate ? latestAnsDateStr : qDate;
+
+              if (lastCompletedDate < virtualTodayStr) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          const isAllQuestionsAnswered = allActiveQs.length > 0 && allActiveQs.every((qItem) => {
+            if (isGuardian) {
+              return answers.some((a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian);
+            } else {
+              return answers.some((a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && !a.by_guardian);
+            }
+          });
+
+          const todayDiary = recentDiaries.find((d) => {
+            const dDate = d.event_date || (d.created_at ? toLocalDateString(d.created_at) : "");
+            return dDate === virtualTodayStr;
+          });
+
+          const isDiaryCompleted = isGuardian ? true : Boolean(todayDiary);
+
+          // All containers on home page must be answered!
+          const isAllContainersCompleted = isAllQuestionsAnswered && isDiaryCompleted;
+
+          const renderCompletionBanner = () => {
+            if (!isAllContainersCompleted) return null;
+            return (
+              <div className="w-full p-5 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold shrink-0">
+                    ✨
+                  </div>
+                  <div className="text-left flex flex-col gap-0.5">
+                    <h3 className="text-base font-serif font-bold text-emerald-900 dark:text-emerald-200">
+                      오늘 할 일을 모두 완료했어요!
+                    </h3>
+                    <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80 font-serif">
+                      오늘 지면에 표시된 모든 회상 질문과 일기 기록을 마쳤습니다.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs font-serif font-bold shrink-0">
+                  완료 100%
+                </span>
+              </div>
+            );
+          };
+
           // Shared Question Card Helper Component (Renders daily question + custom proposed questions)
           const renderUnifiedQuestionCard = () => {
-            const virtualTodayStr = supabaseService.getVirtualTodayString();
-            const rawActiveQs: DBQuestionHistory[] = [];
-            if (todayQuestion) rawActiveQs.push(todayQuestion);
-            if (customProposedQuestions && customProposedQuestions.length > 0) {
-              rawActiveQs.push(...customProposedQuestions);
-            }
-
-            // Exclude cards where BOTH elderly & guardian have answered AND a new day has arrived
-            const allActiveQs = rawActiveQs.filter((qItem) => {
-              const eAns = answers.find(
-                (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && !a.by_guardian
-              );
-              const gAns = answers.find(
-                (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian
-              );
-
-              const isBothAnswered = Boolean(eAns && gAns);
-              if (isBothAnswered) {
-                const latestAnsDateStr = eAns!.created_at > gAns!.created_at
-                  ? toLocalDateString(eAns!.created_at)
-                  : toLocalDateString(gAns!.created_at);
-                const qDate = toLocalDateString(qItem.created_at);
-                const lastCompletedDate = latestAnsDateStr > qDate ? latestAnsDateStr : qDate;
-
-                // Hide card if next day has arrived after dual completion
-                if (lastCompletedDate < virtualTodayStr) {
-                  return false;
-                }
-              }
-              return true;
-            });
-
             if (allActiveQs.length === 0) return null;
 
             return (
@@ -348,10 +400,19 @@ function HomeContent() {
                     (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.by_guardian
                   );
 
-                  const isCustomProposed = customProposedQuestions.some((cq) => cq.id === qItem.id);
+                  const isCustomProposed = customProposedQuestions.some((cq) => cq.id === qItem.id || cq.question_text === qItem.question_text);
                   const badgeLabel = isCustomProposed
-                    ? (qItem.created_by === "guardian" ? "🙋‍♀️ 자녀가 제안한 추가 추억 질문" : "👴 어르신 제안 추가 추억 질문")
-                    : (qItem.shared ? "📌 세대 연결 공통 회상 질문" : "📌 오늘의 미션: 회상 구절 적기");
+                    ? (qItem.created_by === "guardian" ? "자녀가 제안한 추가 추억 질문" : "어르신 제안 추가 추억 질문")
+                    : (qItem.shared ? "세대 연결 공통 회상 질문" : "오늘의 미션: 회상 구절 적기");
+
+                  // Fallback lookup for custom_image_url in case qItem missing property from server join
+                  const matchedCustomProp = customProposedQuestions.find(
+                    (cq) => cq.id === qItem.id || (cq.question_text && qItem.question_text && cq.question_text.trim() === qItem.question_text.trim())
+                  );
+                  const matchedAnswerWithMedia = answers.find(
+                    (a) => (a.question_id === qItem.id || (a.question_text && qItem.question_text && a.question_text.trim() === qItem.question_text.trim())) && a.media_url
+                  );
+                  const displayImageUrl = qItem.custom_image_url || matchedCustomProp?.custom_image_url || matchedAnswerWithMedia?.media_url;
 
                   return (
                     <div key={qItem.id} className="w-full p-6 sm:p-7 rounded-3xl bg-amber-100/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-sm text-left flex flex-col gap-5">
@@ -363,7 +424,7 @@ function HomeContent() {
                         </div>
                         {qItem.shared && (
                           <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
-                            {elderlyAnswer && guardianAnswer ? "세대 매듭 완결 ✦" : "세대 매듭 연결 중 ✦"}
+                            {elderlyAnswer && guardianAnswer ? "세대 매듭 완결" : "세대 매듭 연결 중"}
                           </span>
                         )}
                       </div>
@@ -372,12 +433,12 @@ function HomeContent() {
                         &ldquo;{qItem.question_text}&rdquo;
                       </h3>
 
-                      {qItem.custom_image_url && (
-                        <div className="w-full rounded-2xl overflow-hidden border border-amber-300/80 dark:border-amber-700/60 shadow-xs max-h-64 flex items-center justify-center bg-black/5">
+                      {displayImageUrl && (
+                        <div className="w-full rounded-2xl overflow-hidden border border-amber-300/80 dark:border-amber-700/60 shadow-xs max-h-72 flex items-center justify-center bg-black/10">
                           <img
-                            src={qItem.custom_image_url}
+                            src={displayImageUrl}
                             alt="첨부된 추억 사진"
-                            className="w-full h-full object-cover max-h-64"
+                            className="w-full h-full object-cover max-h-72"
                           />
                         </div>
                       )}
@@ -387,8 +448,9 @@ function HomeContent() {
                         {/* 1. Elderly Answer Box */}
                         <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-900/40 border border-amber-200/90 dark:border-amber-800/60 flex flex-col justify-between gap-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
-                              👵 어르신(순자 님)의 기억
+                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                              <User size={12} className="text-amber-600 dark:text-amber-400" />
+                              어르신(순자 님)의 기억
                             </span>
                             {elderlyAnswer ? (
                               <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">기록 완료</span>
@@ -412,13 +474,8 @@ function HomeContent() {
                               onClick={() => router.push(`/journal?qid=${qItem.id}`)}
                               className="w-full py-2 px-3 text-xs font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-1 shadow-xs mt-1"
                             >
-                              {elderlyAnswer ? (
-                                <>
-                                  <Edit3 size={13} /> 어르신 답변 수정하기
-                                </>
-                              ) : (
-                                "어르신 답변 기록하기 ✦"
-                              )}
+                              <Edit3 size={13} />
+                              {elderlyAnswer ? "어르신 답변 수정하기" : "어르신 답변 기록하기"}
                             </button>
                           )}
                         </div>
@@ -426,8 +483,9 @@ function HomeContent() {
                         {/* 2. Guardian Answer Box */}
                         <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-900/40 border border-amber-200/90 dark:border-amber-800/60 flex flex-col justify-between gap-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
-                              🙋‍♀️ 보호자(지영 님)의 기억
+                            <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                              <User size={12} className="text-amber-600 dark:text-amber-400" />
+                              보호자(지영 님)의 기억
                             </span>
                             {guardianAnswer ? (
                               <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">기록 완료</span>
@@ -451,13 +509,8 @@ function HomeContent() {
                               onClick={() => router.push(`/journal?qid=${qItem.id}`)}
                               className="w-full py-2 px-3 text-xs font-serif font-bold bg-primary text-primary-foreground hover:opacity-95 rounded-xl transition-all flex items-center justify-center gap-1 shadow-xs mt-1"
                             >
-                              {guardianAnswer ? (
-                                <>
-                                  <Edit3 size={13} /> 보호자 답변 수정하기
-                                </>
-                              ) : (
-                                "보호자 답변 기록하기 ✦"
-                              )}
+                              <Edit3 size={13} />
+                              {guardianAnswer ? "보호자 답변 수정하기" : "보호자 답변 기록하기"}
                             </button>
                           )}
                         </div>
@@ -466,7 +519,7 @@ function HomeContent() {
                       {/* Merged Perspective Banner if both answered */}
                       {elderlyAnswer && guardianAnswer && (
                         <div className="p-3 rounded-xl bg-amber-200/60 dark:bg-amber-900/60 border border-amber-400/40 text-amber-950 dark:text-amber-100 text-xs font-serif font-bold flex items-center gap-2">
-                          <Sparkles size={14} className="text-amber-700 dark:text-amber-300 shrink-0" />
+                          <Users size={14} className="text-amber-700 dark:text-amber-300 shrink-0" />
                           <span>두 사람의 기억이 하나의 따뜻한 세대 매듭으로 통합 연결되었습니다.</span>
                         </div>
                       )}
@@ -481,6 +534,9 @@ function HomeContent() {
           if (isGuardian) {
             return (
               <div className="flex flex-col gap-5 w-full">
+                {/* All Containers Completion Banner */}
+                {renderCompletionBanner()}
+
                 {/* Unified Shared Question Container Card */}
                 {renderUnifiedQuestionCard()}
 
@@ -498,7 +554,7 @@ function HomeContent() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-highlight group-hover:scale-105 transition-transform shrink-0">
-                            <Sparkles size={20} />
+                            <Lightbulb size={20} />
                           </div>
                           {hasProposedToday && (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
@@ -514,8 +570,9 @@ function HomeContent() {
                             {hasProposedToday ? "오늘 대화 주제 제안이 완료되었습니다 (하루 1회)" : "옛 앨범 사진이나 이야기 힌트로 정겨운 질문 다듬기"}
                           </p>
                         </div>
-                        <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs">
-                          {hasProposedToday ? "제안 내역 보기 &rarr;" : "바로가기 &rarr;"}
+                        <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs inline-flex items-center gap-1 self-end">
+                          {hasProposedToday ? "제안 내역 보기" : "바로가기"}
+                          <ArrowRight size={13} />
                         </div>
                       </div>
                     );
@@ -535,12 +592,36 @@ function HomeContent() {
                           인물, 장소, 사건별로 정돈된 어르신의 추억 보관함
                         </p>
                       </div>
-                      <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs">
-                        바로가기 &rarr;
+                      <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs inline-flex items-center gap-1 self-end">
+                        바로가기
+                        <ArrowRight size={13} />
                       </div>
                     </div>
                   </Link>
                 </div>
+
+                {/* Guardian Menu Card 3: Album Photo Gallery */}
+                <Link href="/album" className="group w-full">
+                  <div className="w-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform shrink-0">
+                        <ImageIcon size={20} />
+                      </div>
+                      <div className="text-left flex flex-col gap-0.5">
+                        <h4 className="text-sm sm:text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                          어르신의 추억 사진첩 보기
+                        </h4>
+                        <p className="text-xs text-muted-foreground font-sans leading-normal">
+                          모아둔 옛 앨범 사진과 제안 사진들의 모음 갤러리
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs shrink-0 inline-flex items-center gap-1">
+                      사진첩 보기
+                      <ArrowRight size={13} />
+                    </div>
+                  </div>
+                </Link>
 
                 <CalendarWidget answers={answers} diaries={recentDiaries} onSelectDate={handleSelectDate} />
               </div>
@@ -550,6 +631,9 @@ function HomeContent() {
           // Elderly Mode (self): Always show Unified Question Card & Mission 2 Cards + 2-Column Horizontal Menu
           return (
             <div className="flex flex-col gap-5 w-full">
+              {/* All Containers Completion Banner */}
+              {renderCompletionBanner()}
+
               {/* Unified Shared Question Container Card (Self mode) */}
               {renderUnifiedQuestionCard()}
 
@@ -558,23 +642,31 @@ function HomeContent() {
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold border border-amber-400/40 shadow-xs">
                     <Sun size={13} className="text-amber-600 dark:text-amber-400" />
-                    📌 오늘의 미션 2: 일상 일기 적기
+                    오늘의 미션 2: 일상 일기 적기
                   </div>
-                  {recentDiaries.length > 0 && (
-                    <span className="text-[11px] text-amber-800 dark:text-amber-300 font-serif font-bold">
-                      보관된 일기 {recentDiaries.length}건
+                  {todayDiary ? (
+                    <span className="text-[11px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-serif font-bold">
+                      오늘 작성 완료
+                    </span>
+                  ) : (
+                    <span className="text-[11px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full font-serif font-bold">
+                      오늘 작성 대기
                     </span>
                   )}
                 </div>
 
                 <h4 className="text-base font-serif font-bold text-amber-950 dark:text-amber-100">
-                  {dailyDiaryPrompt}
+                  {todayDiary ? "오늘의 일상 일기 기록" : dailyDiaryPrompt}
                 </h4>
 
-                {recentDiaries.length > 0 && (
-                  <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 text-xs font-serif text-amber-900 dark:text-amber-200 italic truncate">
-                    &ldquo;{recentDiaries[0].content}&rdquo;
+                {todayDiary ? (
+                  <div className="p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-900/40 border border-amber-200/90 dark:border-amber-800/60 text-xs font-serif text-amber-950 dark:text-amber-100 italic line-clamp-3 leading-relaxed">
+                    &ldquo;{todayDiary.content}&rdquo;
                   </div>
+                ) : (
+                  <p className="text-xs font-serif text-amber-800/80 dark:text-amber-300/80 leading-relaxed italic">
+                    오늘 하루 동안 마주친 풍경, 드신 음식, 가족과의 따뜻한 대화를 편안하게 기록해보세요.
+                  </p>
                 )}
 
                 <button
@@ -582,31 +674,54 @@ function HomeContent() {
                   className="w-full py-3 text-base font-serif font-bold bg-amber-200/90 dark:bg-amber-900/60 hover:bg-amber-300/90 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 border border-amber-400/50 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs"
                 >
                   <Edit3 size={15} className="text-amber-700 dark:text-amber-300" />
-                  오늘 일상 일기 적기 ✦
+                  {todayDiary ? "오늘 일기 수정하기" : "오늘 일상 일기 적기"}
                 </button>
               </div>
 
-              {/* 3. 11-Category Card Viewer (Self Mode - Full Width) */}
-              <Link href="/narrative" className="group w-full">
-                <div className="w-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex items-center justify-between cursor-pointer gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
-                      <BookOpen size={22} />
+              {/* 3. 2-Column Storage Menu Grid: 11-Category Box + Album Photo Gallery (Self Mode) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+                {/* Menu 1: 11-Category Box */}
+                <Link href="/narrative" className="group w-full">
+                  <div className="h-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex flex-col justify-between cursor-pointer gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+                      <BookOpen size={20} />
                     </div>
-                    <div className="text-left flex flex-col gap-0.5">
-                      <h4 className="text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                    <div className="text-left flex flex-col gap-1">
+                      <h4 className="text-sm sm:text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
                         내 11-카테고리 추억 보관함
                       </h4>
                       <p className="text-xs text-muted-foreground font-sans leading-normal">
-                        인물, 장소, 사건별로 차곡차곡 정돈된 나의 서사 보관함
+                        인물, 장소, 사건별로 정돈된 나의 서사 보관함
                       </p>
                     </div>
+                    <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs inline-flex items-center gap-1 self-end">
+                      보관함 보기
+                      <ArrowRight size={13} />
+                    </div>
                   </div>
-                  <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs shrink-0">
-                    보관함 보기 &rarr;
+                </Link>
+
+                {/* Menu 2: Album Photo Gallery */}
+                <Link href="/album" className="group w-full">
+                  <div className="h-full p-5 rounded-2xl bg-background border border-border hover:border-primary/30 hover:bg-muted/35 transition-all flex flex-col justify-between cursor-pointer gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform shrink-0">
+                      <ImageIcon size={20} />
+                    </div>
+                    <div className="text-left flex flex-col gap-1">
+                      <h4 className="text-sm sm:text-base font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                        추억 사진첩 보기
+                      </h4>
+                      <p className="text-xs text-muted-foreground font-sans leading-normal">
+                        모아둔 옛 앨범 사진과 제안 사진들의 모음 갤러리
+                      </p>
+                    </div>
+                    <div className="text-right text-primary group-hover:translate-x-1 transition-transform font-bold text-xs inline-flex items-center gap-1 self-end">
+                      사진첩 보기
+                      <ArrowRight size={13} />
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
 
               <CalendarWidget answers={answers} diaries={recentDiaries} onSelectDate={handleSelectDate} />
             </div>
@@ -615,7 +730,7 @@ function HomeContent() {
       </main>
 
       <footer className="w-full max-w-lg mx-auto text-center mt-12 pb-4">
-        <p className="text-[11px] text-zinc-400 font-serif leading-normal select-none">
+        <p className="text-[11px] text-muted-foreground font-serif leading-normal select-none">
           이음 서첩은 어르신의 평온한 두뇌 인지 자극과 추억 회고만을 돕는 서가입니다. <br />
           정신과 전문의나 의학적인 진찰 및 소견을 강요하지 않는 비상업적 공간입니다.
         </p>

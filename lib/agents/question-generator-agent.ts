@@ -198,27 +198,29 @@ ${historyStr}
     const roleContext = creatorRole === "guardian" ? "자녀분(보호자)이 직접 제안한 특정 추억 주제" : "어르신 본인이 직접 꺼낸 특정 추억 주제";
 
     const systemPrompt = `너는 노년층의 회상을 돕는 '이음' 플랫폼의 사용자 맞춤 질문 변환 전용 에이전트이다.
-사용자나 보호자가 입력한 특정 [입력 힌트 문구]를 바탕으로, 해당 주제를 직접 언급하여 어르신께 물어보는 1개의 명확하고 다정한 회상 질문으로 변환하라.
+사용자나 보호자가 입력한 특정 [입력 힌트 문구](사진 설명, 손글씨/지면 글씨, 대화 주제 등)의 전체적인 의미와 맥락을 깊이 이해하고, 입력 문구를 단순 덧붙이지 말고 다정하고 자연스러운 1문장의 개방형 회상 질문으로 재구성하라.
 
-[절대 작성 원칙]
-1. 입력 힌트에 기재된 연도, 장소, 인물, 사건 키워드(예: "2002년 소풍 이야기", "1972년 돌잔치")를 자연스럽게 포착하여 다정한 1문장 질문으로 작성하라.
-2. 절대로 '[사진 설명]', '[지면 글씨]' 같은 포맷 태그 문구를 질문 문장 안에 그대로 붙이거나 포함하지 마라.
-3. 절대로 주제를 포괄적이거나 일반적인 추상적 질문으로 우회하지 말고, 맥락 속 주요 사건을 직접적으로 다정하게 물어보라.
+[작성 원칙]
+1. 입력 문구의 키워드(게임 승률, 인물, 장소, 사건, 음식, 연도 등)를 단순히 단어 뒤에 '~에 대해 어떤 소중한 추억이 떠오르시나요?'를 붙이는 기계적 템플릿 연결을 절대 금한다.
+2. 입력 텍스트 전체의 맥락을 이해하여 어르신께 물어보듯 다정하고 자연스럽게 풀어서 질문을 재구성하라.
+   - 예: "아버지의 롤 승률이야 승률 44.68%" -> "아버님께서 즐겨 하시던 게임의 승률 기록을 보니 남다른 열정이 느껴지네요. 혹시 게임을 즐기시던 모습이나 이 기록에 얽힌 재미있는 추억이 있으신가요?"
+3. 절대로 '[사진 설명]', '[지면 글씨]' 같은 포맷 태그 문구를 질문 문장 안에 그대로 붙이거나 포함하지 마라.
 4. 인사말, 머리말("질문:"), 부가설명 문구를 단 1단어도 포함하지 마라.
 5. 질문 문장은 반드시 '?'(물음표)로 끝나게 하라.
 
 [출력 포맷]
-JSON 형식: { "question": "질문 문장" }`;
+JSON 형식: { "question": "재구성된 1문장 질문 문장" }`;
 
-    const userPrompt = `아래 [입력 힌트 문구]의 맥락과 사건을 바탕으로 어르신께 드릴 명확하고 다정한 질문 1개로 변환해 주세요.
+    const userPrompt = `아래 [입력 힌트 문구]의 의미와 맥락을 깊이 파악하여, 기계적 덧붙임 없이 다정하고 자연스러운 회상 질문 1개로 재구성해 주세요.
 작성 주체: ${roleContext}
 입력 힌트 문구: "${sanitizedInput}"
 추출 키워드: [${entityListStr}]
 
 [변환 예시]
-- 입력: "2002년 소풍 이야기" -> 질문: "2002년 소풍 갔던 날, 어떤 재미있는 일이 있었나요?"
-- 입력: "1972년 마당에서 선우 돌잔치를 치렀다" -> 질문: "1972년 선우 돌잔치 날, 온 가족이 모여 즐겁게 보내셨던 기분이 어떠하셨나요?"
-- 입력: "어머니 된장찌개" -> 질문: "어머니가 끓여주신 된장찌개에 대해 어떤 따뜻한 기억이 있으신가요?"
+- 입력: "2002년 소풍 이야기" -> 질문: "2002년 소풍을 떠나셨던 날, 가장 마음이 설레고 즐거우셨던 순간은 언제였나요?"
+- 입력: "1972년 마당에서 선우 돌잔치를 치렀다" -> 질문: "1972년 마당에서 치렀던 선우의 돌잔치 날, 온 동네가 북적이며 나누었던 기쁨이 기억나시나요?"
+- 입력: "어머니 된장찌개" -> 질문: "어린 시절 어머니가 뚝배기에 보글보글 끓여주셨던 된장찌개에 얽힌 구수한 추억이 떠오르시나요?"
+- 입력: "아버지의 롤 승률이야 승률 44.68%" -> 질문: "열심히 게임을 치르며 기록하신 멋진 승률을 보니 반갑네요! 이 게임을 즐기시며 아버님과 나눈 특별한 이야기나 기억이 있으신가요?"
 
 응답은 JSON 포맷으로 {"question": "..."} 형태로만 작성해 주세요.`;
 
@@ -245,7 +247,7 @@ JSON 형식: { "question": "질문 문장" }`;
 
     try {
       const responseText = await solarService.generateText(userPrompt, {
-        temperature: 0.2,
+        temperature: 0.3,
         responseFormatJson: true,
         systemPrompt,
       });
@@ -266,16 +268,19 @@ JSON 형식: { "question": "질문 문장" }`;
     // Smart Fallback Handling
     let fallbackQ = "제시해주신 소중한 사진과 추억에 대해 어떤 이야기가 떠오르시나요?";
     if (sanitizedInput) {
-      if (sanitizedInput.length > 25 || sanitizedInput.includes("\n")) {
-        const yearMatch = sanitizedInput.match(/19[5-9]\d|20[0-2]\d/);
-        if (yearMatch) {
-          fallbackQ = `${yearMatch[0]}년 무렵에 치르셨던 특별한 일이나 추억에 대해 어떤 기억이 생각나시나요?`;
-        } else {
-          fallbackQ = "올려주신 사진 속 지면 글과 관련하여 어떤 정겨운 이야기가 생각나시나요?";
-        }
+      const yearMatch = sanitizedInput.match(/19[5-9]\d|20[0-2]\d/);
+      if (yearMatch) {
+        fallbackQ = `${yearMatch[0]}년 무렵에 치르셨던 특별한 일이나 추억에 어떤 정겨운 기억이 떠오르시나요?`;
+      } else if (sanitizedInput.includes("승률") || sanitizedInput.includes("게임") || sanitizedInput.includes("롤")) {
+        fallbackQ = "열심히 마음을 쏟았던 게임과 관련하여 어떤 재미있고 특별한 기억이 있으신가요?";
       } else {
-        const cleanInput = sanitizedInput.replace(/(이야기|추억|기억)$/, "").trim();
-        fallbackQ = `${cleanInput}에 대해 어떤 소중한 추억이 떠오르시나요?`;
+        const cleanInput = sanitizedInput
+          .replace(/\[(사진 설명|지면 글씨)\]/g, "")
+          .replace(/(이야기|추억|기억|사진|기록)$/, "")
+          .trim();
+        fallbackQ = cleanInput.length > 3
+          ? `"${cleanInput.slice(0, 30)}" 문구와 관련해서 어떤 정겨운 이야기가 생각나시나요?`
+          : "남겨주신 소중한 기록에 대해 어떤 추억이 떠오르시나요?";
       }
     }
 
@@ -307,15 +312,21 @@ JSON 형식: { "question": "질문 문장" }`;
 
     const contextText = `${recentAnswerSnippet} ${recentDiarySnippet}`.trim();
 
+    const defaultPrompts = [
+      "오늘 어떤 일이 있으셨고, 특별히 드신 맛있는 음식이 있으신가요?",
+      "오늘 하루 중 가장 마음이 따뜻하셨던 순간이나 특별히 남기고 싶으신 일상이 있으신가요?",
+      "오늘 걸으시거나 이웃, 가족과 대화하며 나눈 정겨운 이야기가 있으신가요?",
+      "오늘 계절 날씨나 창밖 풍경을 보시며 어떤 생각이나 느낌이 드셨나요?",
+      "오늘 하루 만난 반가운 얼굴이나 길에서 마주친 정겨운 사람/동물이 있으신가요?",
+      "오늘 마음을 그윽하게 만든 따뜻한 차 한 잔이나 소소한 즐거움이 있으셨나요?",
+      "오늘 라디오나 음악을 들으시며 문득 떠오른 정겨운 옛 기억이 있으신가요?",
+      "오늘 가족이나 손주 생각에 절로 미소가 지어진 기분 좋은 일상이 있으셨나요?",
+      "오늘 하루 동안 몸과 마음의 컨디션은 어떠셨고, 어떤 일과를 보내셨나요?",
+      "오늘 찍은 사진이 있으시거나 지인들과 나눈 반가운 안부 연락이 있으셨나요?",
+    ];
+
     if (!contextText) {
-      const defaultPrompts = [
-        "오늘 어떤 일이 있으셨고, 특별히 드신 맛있는 음식이 있으신가요?",
-        "오늘 하루 중 가장 마음이 따뜻하셨던 순간이나 특별히 남기고 싶으신 일상이 있으신가요?",
-        "오늘 걸으시거나 이웃, 가족과 대화하며 나눈 정겨운 이야기가 있으신가요?",
-        "오늘 계절 날씨나 풍경을 보시며 어떤 생각이나 느낌이 드셨나요?",
-      ];
-      const dayIndex = new Date().getDay() % defaultPrompts.length;
-      return defaultPrompts[dayIndex];
+      return defaultPrompts[Math.floor(Math.random() * defaultPrompts.length)];
     }
 
     const systemPrompt = `너는 노년층 어르신의 일상 기록을 따뜻하게 유도하는 '이음' 일상 일기 질문 다듬기 에이전트이다.
@@ -334,7 +345,7 @@ JSON 포맷: { "prompt": "질문 문장" }`;
 
     try {
       const responseText = await solarService.generateText(userPrompt, {
-        temperature: 0.5,
+        temperature: 0.7,
         responseFormatJson: true,
         systemPrompt,
       });
@@ -351,11 +362,6 @@ JSON 포맷: { "prompt": "질문 문장" }`;
       console.error("Error generating dynamic daily diary prompt:", err);
     }
 
-    const fallbacks = [
-      "오늘 어떤 일이 있으셨고, 특별히 드신 맛있는 음식이 있으신가요?",
-      "오늘 하루 만난 반가운 얼굴이나 마주친 정겨운 풍경이 있으신가요?",
-      "오늘 드신 식사나 소소한 일상 중 어떤 순간이 기억에 남으시나요?",
-    ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    return defaultPrompts[Math.floor(Math.random() * defaultPrompts.length)];
   },
 };

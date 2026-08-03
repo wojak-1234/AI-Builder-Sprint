@@ -68,15 +68,16 @@ export const ocrExtractorAgent = {
 
   /**
    * Extracts entities from an array of DBAnswer objects.
-   * Runs entity extraction in parallel for all answer texts.
+   * Parses both question title and user answer text so titles are included in AI tag parsing.
    */
   extractFromAnswers: async (answers: DBAnswer[]): Promise<ExtractedEntity[]> => {
     if (!answers || answers.length === 0) return [];
     try {
       const results = await Promise.all(
         answers.map(async (answer) => {
-          if (!answer.answer_text) return [];
-          const res = await ocrExtractorAgent.extract(answer.answer_text, "text/plain", answer.id);
+          const fullInputText = [answer.question_text, answer.answer_text].filter(Boolean).join(" ");
+          if (!fullInputText.trim()) return [];
+          const res = await ocrExtractorAgent.extract(fullInputText, "text/plain", answer.id);
           // Ensure correct timestamp from answer if available
           return res.entities.map((e) => ({
             ...e,
@@ -88,6 +89,30 @@ export const ocrExtractorAgent = {
       return results.flat();
     } catch (err) {
       console.error("Error in extractFromAnswers:", err);
+      return [];
+    }
+  },
+
+  /**
+   * Extracts entities from custom topic proposals (question_text + user hints + photo descriptions).
+   */
+  extractFromCustomTopics: async (topics: Array<{ id: string; question_text: string; created_at?: string }>): Promise<ExtractedEntity[]> => {
+    if (!topics || topics.length === 0) return [];
+    try {
+      const results = await Promise.all(
+        topics.map(async (topic) => {
+          if (!topic.question_text) return [];
+          const res = await ocrExtractorAgent.extract(topic.question_text, "text/plain", topic.id);
+          return res.entities.map((e) => ({
+            ...e,
+            sourceAnswerId: topic.id,
+            lastMentionedAt: topic.created_at || new Date().toISOString(),
+          }));
+        })
+      );
+      return results.flat();
+    } catch (err) {
+      console.error("Error in extractFromCustomTopics:", err);
       return [];
     }
   },

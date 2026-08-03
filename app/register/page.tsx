@@ -202,19 +202,19 @@ function RegisterContent() {
                 setMode("entry");
               }
             }}
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors text-sm font-serif cursor-pointer"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm font-serif cursor-pointer"
           >
             <ArrowLeft size={16} />
             돌아가기
           </button>
         ) : (
-          <div className="text-zinc-400 font-serif text-xs select-none">이음 서실</div>
+          <div className="text-muted-foreground font-serif text-xs select-none">이음 서실</div>
         )}
         
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
           {mode === "register-steps" && (
-            <span className="text-zinc-400 font-serif text-xs select-none">
+            <span className="text-muted-foreground font-serif text-xs select-none">
               {role === "self" ? "어르신 가입" : "보호자 가입"} ({step}/4)
             </span>
           )}
@@ -294,7 +294,7 @@ function RegisterContent() {
               />
             </div>
 
-            <div className="text-[11px] text-zinc-500 bg-background border border-border/50 p-3.5 rounded-xl leading-relaxed select-none">
+            <div className="text-[11px] text-muted-foreground bg-background border border-border/50 p-3.5 rounded-xl leading-relaxed select-none">
               💡 <strong>데모 체험 안내:</strong><br />
               이메일 <strong className="text-primary">soonja@eeum.com</strong> (어르신) 또는 <strong className="text-primary">jiyoung@eeum.com</strong> (자녀)을 입력하고 비밀번호는 아무 글자나 입력하시면 준비된 테스트 데이터로 바로 체험하실 수 있습니다.
             </div>
@@ -552,7 +552,7 @@ function RegisterContent() {
                   <button
                     onClick={() => setLinkMethod("code")}
                     className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${
-                      linkMethod === "code" ? "border-primary font-bold text-primary" : "border-transparent text-zinc-400"
+                      linkMethod === "code" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
                     }`}
                   >
                     기록코드 입력
@@ -560,7 +560,7 @@ function RegisterContent() {
                   <button
                     onClick={() => setLinkMethod("qr")}
                     className={`flex-1 pb-2 text-center font-serif text-xs border-b-2 transition-all cursor-pointer ${
-                      linkMethod === "qr" ? "border-primary font-bold text-primary" : "border-transparent text-zinc-400"
+                      linkMethod === "qr" ? "border-primary font-bold text-primary" : "border-transparent text-muted-foreground"
                     }`}
                   >
                     QR 코드 스캔
@@ -598,7 +598,7 @@ function RegisterContent() {
                       ) : (
                         <>
                           <Scan size={30} className="text-primary/30" />
-                          <span className="text-[10px] text-zinc-400 font-serif mt-2">QR 배치</span>
+                          <span className="text-[10px] text-muted-foreground font-serif mt-2">QR 배치</span>
                         </>
                       )}
                     </div>
@@ -644,7 +644,7 @@ function RegisterContent() {
                       </div>
                       <div>
                         <h4 className="text-sm font-serif font-bold">{purpose.title}</h4>
-                        <p className={`text-[10px] mt-0.5 leading-relaxed ${appPurpose === purpose.key ? "text-primary-foreground/80" : "text-zinc-500"}`}>
+                        <p className={`text-[10px] mt-0.5 leading-relaxed ${appPurpose === purpose.key ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                           {purpose.desc}
                         </p>
                       </div>
@@ -712,12 +712,12 @@ function RegisterContent() {
         )}
         
         {errors.register && (
-          <p className="text-xs text-red-650 font-serif text-center mt-2 animate-pulse">
+          <p className="text-xs text-destructive font-serif text-center mt-2 animate-pulse">
             {errors.register}
           </p>
         )}
 
-        <p className="text-[10px] text-zinc-400 font-serif text-center mt-6 select-none">
+        <p className="text-[10px] text-muted-foreground font-serif text-center mt-6 select-none">
           이음 서첩에 기록된 모든 자료는 비약물적 회상 인지 자극을 목적으로 보관됩니다.
         </p>
       </footer>

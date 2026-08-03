@@ -6,7 +6,7 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { supabaseService, DBAnswer, DBDailyDiary, DBUser } from "@/services/supabase-service";
 import { ocrExtractorAgent } from "@/lib/agents/ocr-extractor-agent";
 import { ExtractedEntity, EntityType } from "@/lib/analytics/mindmap-analyzer";
-import { ArrowLeft, BookOpen, Tag, Filter, CheckCircle2, ArrowUpDown, Layers, Hash, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, BookOpen, Tag, ArrowUpDown, Layers, Hash, ChevronDown, ChevronUp, LayoutGrid, User, Users, MapPin, Clock, CalendarDays, PawPrint, Leaf, Camera } from "lucide-react";
 
 type NarrativeClientProps = {
   initialUser: DBUser | null;
@@ -15,12 +15,12 @@ type NarrativeClientProps = {
 
 // 5 Key Category Definitions (+ All)
 const CATEGORIES = [
-  { id: "all", label: "전체", icon: "✨" },
-  { id: "person", label: "인물", icon: "👤" },
-  { id: "place", label: "장소", icon: "📍" },
-  { id: "time", label: "시간", icon: "⏳" },
-  { id: "event", label: "행사/계기", icon: "📜" },
-  { id: "animal", label: "동물", icon: "🐕" },
+  { id: "all", label: "전체", icon: LayoutGrid },
+  { id: "person", label: "인물", icon: User },
+  { id: "place", label: "장소", icon: MapPin },
+  { id: "time", label: "시간", icon: Clock },
+  { id: "event", label: "행사/계기", icon: CalendarDays },
+  { id: "animal", label: "동물", icon: PawPrint },
 ] as const;
 
 type VisualCategoryType = typeof CATEGORIES[number]["id"];
@@ -264,7 +264,8 @@ export default function NarrativeClient({
       date: firstAns.created_at.substring(0, 10),
       byGuardian: firstAns.by_guardian,
       isShared,
-      authorLabel: elderlyAns && guardianAns ? "🤝 세대 연결 공통 답변" : guardianAns ? "🙋‍♀️ 보호자 기록" : "👴 어르신 기록",
+      authorLabel: elderlyAns && guardianAns ? "세대 연결 공통 답변" : guardianAns ? "보호자 기록" : "어르신 기록",
+      authorIcon: elderlyAns && guardianAns ? Users : User,
     };
   });
 
@@ -286,7 +287,8 @@ export default function NarrativeClient({
         date: d.event_date || d.created_at.substring(0, 10),
         byGuardian: false,
         isShared: false,
-        authorLabel: "👴 어르신(본인) 직접 일기",
+        authorLabel: "어르신(본인) 직접 일기",
+        authorIcon: User,
       };
     }),
   ].sort((a, b) => b.date.localeCompare(a.date));
@@ -363,7 +365,7 @@ export default function NarrativeClient({
       <header className="w-full max-w-7xl mx-auto flex items-center justify-between mb-6 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
         >
           <ArrowLeft size={16} />
           서랍으로
@@ -371,9 +373,10 @@ export default function NarrativeClient({
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/album")}
-            className="flex items-center gap-1 text-xs font-serif font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-serif font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
           >
-            📸 추억 사진첩 보기
+            <Camera size={13} />
+            추억 사진첩 보기
           </button>
           <ThemeSwitcher />
         </div>
@@ -409,8 +412,9 @@ export default function NarrativeClient({
 
             {/* Mobile Toggle Button */}
             <div className="flex items-center gap-1 md:hidden">
-              <span className="text-[11px] font-serif font-bold text-primary px-2 py-0.5 rounded-lg bg-primary/10">
-                {currentCategoryDef.icon} {currentCategoryDef.label}
+              <span className="text-[11px] font-serif font-bold text-primary px-2 py-0.5 rounded-lg bg-primary/10 inline-flex items-center gap-1">
+                <currentCategoryDef.icon size={11} />
+                {currentCategoryDef.label}
               </span>
               {isCategoryOpen ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
             </div>
@@ -438,7 +442,7 @@ export default function NarrativeClient({
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{cat.icon}</span>
+                    <cat.icon size={14} />
                     <span>{cat.label}</span>
                   </div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold font-mono ${
@@ -503,7 +507,7 @@ export default function NarrativeClient({
                   : "bg-background/60 text-muted-foreground border-border/60 hover:bg-muted/50"
               }`}
             >
-              <span>✨ 카테고리 전체 보기</span>
+              <span>카테고리 전체 보기</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold font-mono ${
                 selectedTag === null ? "bg-white/20 text-white" : "bg-muted/80 text-muted-foreground"
               }`}>
@@ -551,7 +555,7 @@ export default function NarrativeClient({
           <div className="p-4 rounded-2xl bg-secondary/40 border border-border/80 flex items-center justify-between text-xs font-serif">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-foreground inline-flex items-center gap-1">
-                <span>{currentCategoryDef.icon}</span>
+                <currentCategoryDef.icon size={13} />
                 <span>{currentCategoryDef.label}</span>
               </span>
               {selectedTag && (
@@ -592,7 +596,7 @@ export default function NarrativeClient({
           ) : (
             <div className="flex flex-col gap-4.5 w-full">
               {finalCards.map((card) => {
-                const catDef = CATEGORIES.find((c) => c.id === card.category) || { id: "other", label: "일상", icon: "🌿" };
+                const catDef = CATEGORIES.find((c) => c.id === card.category) || { id: "other", label: "일상", icon: Leaf };
                 const isSharedCard = card.isShared;
 
                 return (
@@ -610,11 +614,12 @@ export default function NarrativeClient({
                         {/* Shared Card Badge */}
                         {isSharedCard && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-[11px] font-serif font-bold border border-amber-500/30">
-                            🤝 공통 질문
+                            <Users size={11} />
+                            공통 질문
                           </span>
                         )}
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-background border border-border/80 text-xs font-serif font-bold text-foreground shadow-2xs">
-                          <span>{catDef.icon}</span>
+                          <catDef.icon size={13} />
                           <span>{catDef.label}</span>
                         </div>
                       </div>
@@ -625,7 +630,8 @@ export default function NarrativeClient({
                           card.byGuardian
                             ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40"
                             : "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
-                        }`}>
+                        } inline-flex items-center gap-1`}>
+                          <card.authorIcon size={11} />
                           {card.authorLabel}
                         </span>
                         <span className="font-mono">{card.date}</span>
@@ -664,20 +670,22 @@ export default function NarrativeClient({
                     {/* Content: Dual Answer Boxes for Shared / Grouped Questions inside ONE Container */}
                     {card.isShared || card.guardianAnswerText ? (
                       <div className="flex flex-col gap-3 w-full my-1">
-                        {/* 👵 어르신의 기억 */}
+                        {/* 어르신의 기억 */}
                         <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
-                            👵 어르신(본인)의 기억
+                          <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                            <User size={12} className="text-amber-600 dark:text-amber-400" />
+                            어르신(본인)의 기억
                           </span>
                           <p className="text-xs sm:text-sm font-serif text-amber-950 dark:text-amber-100 leading-relaxed italic select-text whitespace-pre-wrap">
                             {card.elderlyAnswerText ? `“${card.elderlyAnswerText}”` : "아직 어르신의 기록이 작성되지 않았습니다."}
                           </p>
                         </div>
 
-                        {/* 🙋‍♀️ 보호자의 기억 */}
+                        {/* 보호자의 기억 */}
                         <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
-                            🙋‍♀️ 보호자(자녀)의 기억
+                          <span className="text-xs font-serif font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                            <User size={12} className="text-amber-600 dark:text-amber-400" />
+                            보호자(자녀)의 기억
                           </span>
                           <p className="text-xs sm:text-sm font-serif text-amber-950 dark:text-amber-100 leading-relaxed italic select-text whitespace-pre-wrap">
                             {card.guardianAnswerText ? `“${card.guardianAnswerText}”` : "아직 보호자의 기록이 작성되지 않았습니다."}

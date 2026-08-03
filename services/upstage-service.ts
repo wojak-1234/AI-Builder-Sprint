@@ -15,6 +15,26 @@ export type UpstageIEItem = {
   value: string;
 };
 
+export function normalizeTimePeriod(val: string): string {
+  if (!val) return val;
+  let trimmed = val.trim().replace(/\s+/g, "");
+
+  // 2-digit decade pattern: "20년대", "70년대", "80년대" -> 4-digit decade ("2020년대", "1970년대", "1980년대")
+  const shortDecadeMatch = trimmed.match(/^(\d{2})년대$/);
+  if (shortDecadeMatch) {
+    const num = parseInt(shortDecadeMatch[1], 10);
+    if (num >= 40) {
+      return `19${shortDecadeMatch[1]}년대`;
+    } else {
+      return `20${shortDecadeMatch[1]}년대`;
+    }
+  }
+
+  // Ensure "1980 년대" becomes "1980년대"
+  trimmed = trimmed.replace(/(\d{4})년대/g, "$1년대");
+  return trimmed;
+}
+
 export const upstageService = {
   /**
    * Sends a document (image/PDF) to Upstage Document Parse API
@@ -121,8 +141,11 @@ export const upstageService = {
     const addedSet = new Set<string>();
 
     const addEntity = (type: string, value: string) => {
-      const trimmed = value.trim();
+      let trimmed = value.trim();
       if (!trimmed) return;
+      if (type === "time_period") {
+        trimmed = normalizeTimePeriod(trimmed);
+      }
       const key = `${type}:${trimmed.toLowerCase()}`;
       if (!addedSet.has(key)) {
         addedSet.add(key);
@@ -130,8 +153,8 @@ export const upstageService = {
       }
     };
 
-    // 1. Dynamic Regex Matching for Time Periods & Years
-    const yearMatches = text.match(/19[4-9]\d년?|20[0-2]\d년?|[0-9]{2}년대/g);
+    // 1. Dynamic Regex Matching for Time Periods & Years (Normalizes 20년대 -> 2020년대, 80년대 -> 1980년대)
+    const yearMatches = text.match(/19[3-9]\d(?:년|년대)?|20[0-2]\d(?:년|년대)?|\b\d{2}년대\b/g);
     if (yearMatches) {
       yearMatches.forEach((yr) => addEntity("time_period", yr));
     }

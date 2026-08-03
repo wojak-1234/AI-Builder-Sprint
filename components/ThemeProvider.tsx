@@ -19,56 +19,25 @@ const evaluateAutomaticTheme = (): Theme => {
   return hour >= 18 || hour < 6 ? "dark" : "light";
 };
 
+// Keeps the mobile browser chrome / PWA status bar color in sync with the active theme,
+// since a static <meta theme-color> can't react to our manual/time-based .dark class toggle.
+const syncMetaThemeColor = (theme: Theme) => {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute("content", theme === "dark" ? "#1D1C1A" : "#FAF8F5");
+  }
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [isManual, setIsManual] = useState<boolean>(false);
+  const [theme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
-  // Initialize theme on mount
+  // Initialize theme on mount - ALWAYS dark mode
   useEffect(() => {
-    const savedTheme = localStorage.getItem("eeum_theme") as Theme | null;
-    const manualFlag = localStorage.getItem("eeum_theme_manual") === "true";
-    
-    let initialTheme: Theme = "light";
-    if (manualFlag && savedTheme) {
-      initialTheme = savedTheme;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsManual(true);
-    } else {
-      initialTheme = evaluateAutomaticTheme();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsManual(false);
-    }
-    
-    setTheme(initialTheme);
     setMounted(true);
-    
-    // Apply class immediately on mount
-    if (initialTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.add("dark");
+    syncMetaThemeColor("dark");
   }, []);
-
-  // Set up periodic time check to automatically update theme (every minute)
-  useEffect(() => {
-    if (isManual) return; // Skip if user set theme manually
-
-    const interval = setInterval(() => {
-      const targetTheme = evaluateAutomaticTheme();
-      if (theme !== targetTheme) {
-        setTheme(targetTheme);
-        if (targetTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [theme, isManual]);
 
   // Apply active user's accessibility settings dynamically
   useEffect(() => {
@@ -120,22 +89,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [mounted]);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    setIsManual(true);
-    
-    localStorage.setItem("eeum_theme", nextTheme);
-    localStorage.setItem("eeum_theme_manual", "true");
-    
-    if (nextTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Theme is strictly locked to dark mode
+    document.documentElement.classList.add("dark");
+    syncMetaThemeColor("dark");
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, isManual, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: "dark", isManual: true, toggleTheme }}>
       <div className={mounted ? "" : "opacity-0"}>
         {children}
       </div>

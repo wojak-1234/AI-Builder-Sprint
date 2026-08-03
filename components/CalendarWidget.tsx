@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { animate } from "animejs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DBAnswer, DBDailyDiary } from "@/services/supabase-service";
+import { supabaseService, DBAnswer, DBDailyDiary } from "@/services/supabase-service";
 
 // Helper function to convert ISO string or Date into local YYYY-MM-DD
 const toLocalDateString = (isoOrDateStr?: string | Date): string => {
@@ -31,8 +31,23 @@ type CalendarWidgetProps = {
 };
 
 export default function CalendarWidget({ answers, diaries = [], onSelectDate }: CalendarWidgetProps) {
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const virtualTodayStr = supabaseService.getVirtualTodayString();
+
+  const [currentDate, setCurrentDate] = useState(() => {
+    const vDateObj = new Date(virtualTodayStr + "T00:00:00");
+    return isNaN(vDateObj.getTime()) ? new Date() : vDateObj;
+  });
+
   const gridRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync currentDate when virtual date changes or props refresh
+  useEffect(() => {
+    const vTodayStr = supabaseService.getVirtualTodayString();
+    const vDateObj = new Date(vTodayStr + "T00:00:00");
+    if (!isNaN(vDateObj.getTime())) {
+      setCurrentDate(vDateObj);
+    }
+  }, [answers, diaries]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
@@ -66,7 +81,7 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
         id: d.id,
         user_id: d.user_id,
         question_id: "diary",
-        question_text: "📌 오늘의 일상 일기",
+        question_text: "오늘의 일상 일기",
         answer_text: d.content,
         media_url: d.photo_url,
         created_at: d.created_at,
@@ -102,7 +117,7 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
     }
   }, [year, month, answers, diaries]);
 
-  const todayStr = toLocalDateString(new Date());
+  const todayStr = virtualTodayStr;
 
   return (
     <div className="w-full pt-6 pb-4 px-3 sm:px-4 rounded-3xl bg-transparent border-t border-border/40 flex flex-col gap-4 text-left transition-colors duration-300">
@@ -110,7 +125,7 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
       <div className="flex items-center justify-between">
         <div>
           <span className="text-[10px] text-highlight font-serif font-bold tracking-widest uppercase block">
-            📅 활동 기록 데이터 뷰
+            활동 기록 데이터 뷰
           </span>
           <h3 className="text-xl font-serif font-bold text-foreground mt-0.5">
             {year}년 {month + 1}월
@@ -137,13 +152,13 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
 
       {/* Days of Week Header */}
       <div className="grid grid-cols-7 text-center text-xs font-serif font-bold text-muted-foreground border-b border-border pb-2">
-        <span className="text-rose-500/80">일</span>
+        <span className="text-destructive/80">일</span>
         <span>월</span>
         <span>화</span>
         <span>수</span>
         <span>목</span>
         <span>금</span>
-        <span className="text-blue-500/80">토</span>
+        <span className="text-primary/80">토</span>
       </div>
 
       {/* Calendar Grid */}
@@ -169,7 +184,7 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
             >
               {/* Completed Yellow Circle with Pop animation */}
               {isCompleted ? (
-                <div className="completed-circle absolute w-8 h-8 rounded-full bg-[#F5C842] text-zinc-900 font-bold flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                <div className={`completed-circle absolute w-8 h-8 rounded-full bg-highlight text-highlight-foreground font-bold flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform ${isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                   <span className="text-xs font-serif font-bold">{dayNum}</span>
                 </div>
               ) : (
@@ -185,7 +200,7 @@ export default function CalendarWidget({ answers, diaries = [], onSelectDate }: 
 
               {/* Today border indicator if not completed */}
               {isToday && !isCompleted && (
-                <div className="absolute w-8 h-8 rounded-full border-2 border-primary/40 pointer-events-none" />
+                <div className="absolute w-8 h-8 rounded-full border-2 border-primary ring-2 ring-primary/20 pointer-events-none animate-pulse" />
               )}
             </div>
           );

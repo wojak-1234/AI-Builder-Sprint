@@ -194,13 +194,22 @@ function JournalContent() {
     setSafetyError(null);
 
     try {
-      const upstageResult = await upstageService.parseDocument(file);
-      const extraction = await ocrExtractorAgent.extract(upstageResult.text);
-
-      setOcrResultText(extraction.text);
-      setOcrConfidence(extraction.confidence);
-      setOcrLowConfidence(!!extraction.needsRecapture);
-      setOcrCorrectionText(extraction.text);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const extraction = data.data;
+        setOcrResultText(extraction.text || "");
+        setOcrConfidence(extraction.confidence || 0.95);
+        setOcrLowConfidence(!!extraction.needsRecapture);
+        setOcrCorrectionText(extraction.text || "");
+      } else {
+        throw new Error(data.error || "OCR failed");
+      }
     } catch (err) {
       console.error(err);
       setOcrLowConfidence(true);
@@ -372,14 +381,14 @@ function JournalContent() {
       <header className="w-full max-w-lg mx-auto flex items-center justify-between mb-10 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
         >
           <ArrowLeft size={16} />
           서랍으로
         </button>
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          <span className="text-zinc-500 font-serif text-xs block select-none">
+          <span className="text-muted-foreground font-serif text-xs block select-none">
             추억 기록첩
           </span>
         </div>
@@ -498,7 +507,7 @@ function JournalContent() {
                   setTextAnswer("");
                   setSafetyError(null);
                 }}
-                className="text-zinc-505 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-serif inline-flex items-center gap-1 cursor-pointer select-none"
+                className="text-muted-foreground hover:text-foreground text-xs font-serif inline-flex items-center gap-1 cursor-pointer select-none"
               >
                 <X size={14} /> 다른 기록 수단으로 변경
               </button>
@@ -521,7 +530,7 @@ function JournalContent() {
                     <button
                       onClick={isRecording ? stopRecording : startRecording}
                       className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-sm ${isRecording
-                        ? "bg-red-800 hover:bg-red-900 text-white animate-pulse"
+                        ? "bg-destructive hover:opacity-90 text-destructive-foreground animate-pulse"
                         : "bg-primary text-primary-foreground"
                         }`}
                     >
@@ -536,7 +545,7 @@ function JournalContent() {
                     {voiceText ? (
                       <p className="text-base text-foreground leading-loose">{voiceText}</p>
                     ) : (
-                      <p className="text-zinc-400 text-sm italic">음성 분석 구절이 여기에 보관됩니다...</p>
+                      <p className="text-muted-foreground text-sm italic">음성 분석 구절이 여기에 보관됩니다...</p>
                     )}
                   </div>
                 </div>
@@ -549,7 +558,7 @@ function JournalContent() {
                     <label className="flex flex-col items-center justify-center p-12 border border-dashed border-primary/30 rounded-2xl hover:border-primary transition-all cursor-pointer bg-background shadow-sm">
                       <ImageIcon size={40} className="text-primary/40 mb-3" />
                       <span className="text-base font-serif font-bold text-primary">기록 지면 사진 올리기</span>
-                      <span className="text-[10px] text-zinc-400 mt-2 font-serif">카메라로 편지나 일기 책장을 비추어 주세요</span>
+                      <span className="text-[10px] text-muted-foreground mt-2 font-serif">카메라로 편지나 일기 책장을 비추어 주세요</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -572,14 +581,14 @@ function JournalContent() {
                             <p className="text-xs font-serif font-bold text-primary truncate max-w-[150px]">
                               {ocrFile?.name}
                             </p>
-                            <p className="text-[10px] text-zinc-450 dark:text-zinc-400">
+                            <p className="text-[10px] text-muted-foreground">
                               {(ocrFile!.size / 1024).toFixed(1)} KB
                             </p>
                           </div>
                         </div>
                         <button
                           onClick={handleOcrDelete}
-                          className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center text-zinc-500 hover:text-red-800 cursor-pointer"
+                          className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-destructive cursor-pointer"
                         >
                           <Trash2 size={14} />
                         </button>

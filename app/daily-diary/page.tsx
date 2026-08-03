@@ -37,8 +37,13 @@ export default function DailyDiaryPage() {
       setUser(currUser);
       const elderlyId = currUser?.role === "self" ? currUser.id : currUser?.paired_user_id || "user-elderly-123";
       const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const todayDiary = diaries.find((d) => (d.event_date || d.created_at.slice(0, 10)) === todayStr);
+      const virtualTodayStr = supabaseService.getVirtualTodayString();
+
+      // Check if a diary entry exists SPECIFICALLY for virtualTodayStr
+      const todayDiary = diaries.find((d) => {
+        const dDate = d.event_date || (d.created_at ? d.created_at.slice(0, 10) : "");
+        return dDate === virtualTodayStr;
+      });
 
       if (todayDiary) {
         setTextAnswer(todayDiary.content);
@@ -46,6 +51,14 @@ export default function DailyDiaryPage() {
         setExistingDiaryCreatedAt(todayDiary.created_at);
         if (todayDiary.photo_url) setPhotoPreview(todayDiary.photo_url);
         setAnswerType("text"); // Direct edit mode for today's diary
+      } else {
+        // Reset inputs for a brand new day
+        setTextAnswer("");
+        setExistingDiaryId(null);
+        setExistingDiaryCreatedAt(null);
+        setPhotoPreview(null);
+        setPhotoFile(null);
+        setAnswerType(null);
       }
 
       // Fetch dynamic personalized prompt using LLM
@@ -156,6 +169,7 @@ export default function DailyDiaryPage() {
 
     try {
       setLoading(true);
+      const virtualTodayStr = supabaseService.getVirtualTodayString();
 
       const newDiary: DBDailyDiary = {
         id: existingDiaryId || `d-${Date.now()}`,
@@ -163,7 +177,7 @@ export default function DailyDiaryPage() {
         content: finalContent.trim() || "(오늘의 일상 기록)",
         photo_url: photoPreview || undefined,
         created_at: existingDiaryCreatedAt || new Date().toISOString(),
-        event_date: new Date().toISOString().substring(0, 10),
+        event_date: virtualTodayStr,
       };
 
       await supabaseService.saveDailyDiary(newDiary);
@@ -192,20 +206,36 @@ export default function DailyDiaryPage() {
     }
   };
 
+  const [refreshingPrompt, setRefreshingPrompt] = useState(false);
+  const handleRefreshPrompt = async () => {
+    try {
+      setRefreshingPrompt(true);
+      const elderlyId = user?.role === "self" ? user.id : user?.paired_user_id || "user-elderly-123";
+      const allAnswers = await supabaseService.getAnswers(elderlyId);
+      const diaries = await supabaseService.getRecentDailyDiaries(elderlyId);
+      const newPrompt = await questionGeneratorAgent.generateDynamicDailyDiaryPrompt(allAnswers, diaries);
+      if (newPrompt) setDynamicPrompt(newPrompt);
+    } catch (e) {
+      console.error("Failed to refresh prompt", e);
+    } finally {
+      setRefreshingPrompt(false);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground px-6 py-12 relative transition-colors duration-300 select-none">
       {/* Top Navigation - Unified with /journal */}
       <header className="w-full max-w-lg mx-auto flex items-center justify-between mb-8 border-b border-border pb-4">
         <button
           onClick={() => router.push("/home")}
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer text-sm font-serif"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-serif"
         >
           <ArrowLeft size={16} />
           서랍으로
         </button>
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          <span className="text-zinc-500 font-serif text-xs block select-none">
+          <span className="text-muted-foreground font-serif text-xs block select-none">
             일상 일기 서첩
           </span>
         </div>
@@ -215,9 +245,20 @@ export default function DailyDiaryPage() {
       <main className="w-full max-w-lg mx-auto flex-1 flex flex-col gap-5">
         {/* Hero Topic Banner */}
         <div className="p-6 sm:p-7 rounded-3xl hero-remembrance-card text-left select-text relative flex flex-col gap-2.5">
-          <div className="stamp-badge w-fit">
-            <Sun size={13} className="text-amber-600 dark:text-amber-400" />
-            <span>오늘의 일상 이야기 주제</span>
+          <div className="flex items-center justify-between">
+            <div className="stamp-badge w-fit">
+              <Sun size={13} className="text-amber-600 dark:text-amber-400" />
+              <span>오늘의 일상 이야기 주제</span>
+            </div>
+            <button
+              onClick={handleRefreshPrompt}
+              disabled={refreshingPrompt}
+              title="새 일기 주제 추천받기"
+              className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-serif font-bold hover:bg-amber-500/30 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw size={12} className={refreshingPrompt ? "animate-spin text-amber-600" : "text-amber-700 dark:text-amber-300"} />
+              <span>다른 주제 보기</span>
+            </button>
           </div>
           <h2 className="text-lg sm:text-xl font-serif font-black text-amber-950 dark:text-amber-100 leading-relaxed tracking-tight">
             &ldquo;{dynamicPrompt}&rdquo;

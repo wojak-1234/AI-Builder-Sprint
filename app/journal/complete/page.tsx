@@ -141,7 +141,7 @@ export default function JournalCompletePage() {
             >
               기록첩 닫기
             </Button>
-            <span className="text-[10px] text-zinc-400 font-serif">
+            <span className="text-[10px] text-muted-foreground font-serif">
               잠시 후 자동으로 홈 화면으로 돌아갑니다.
             </span>
           </div>

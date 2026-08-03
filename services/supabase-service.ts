@@ -522,6 +522,7 @@ export const supabaseService = {
           created_at: qHistory.created_at,
           status: qHistory.status || "pending",
           shared: Boolean(qHistory.shared),
+          custom_image_url: qHistory.custom_image_url,
         };
         // Update both custom_proposed_questions and questions_history with updated question_text
         await client.from("custom_proposed_questions").upsert(qHistory);
