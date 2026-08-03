@@ -197,11 +197,11 @@ export const upstageService = {
       },
       {
         type: "animal",
-        keywords: ["강아지", "바둑이", "고양이", "나비", "누렁이", "새", "소", "돼지", "닭", "동물"]
+        keywords: ["강아지", "바둑이", "고양이", "나비", "누렁이", "새소리", "황소", "돼지", "수탉", "암탉", "동물", "병아리", "참새", "제비"]
       },
       {
         type: "food",
-        keywords: ["김밥", "홍시", "감", "떡", "분홍 소시지", "참기름", "된장찌개", "시래기국", "국수", "비빔밥", "고구마", "옥수수"]
+        keywords: ["김밥", "홍시", "감자", "떡국", "떡볶이", "분홍 소시지", "참기름", "된장찌개", "시래기국", "국수", "비빔밥", "고구마", "옥수수", "감주", "단감"]
       },
       {
         type: "object",
@@ -217,9 +217,22 @@ export const upstageService = {
       },
     ];
 
+    // Helper: checks if a Korean keyword appears as a standalone word (not inside a larger word).
+    // For keywords of 1-2 chars, requires surrounding whitespace/punctuation/string boundary.
+    // For keywords of 3+ chars, simple includes() is safe enough in Korean context.
+    const keywordMatches = (src: string, kw: string): boolean => {
+      if (kw.length <= 2) {
+        // Require word boundary: kw must be preceded and followed by non-Korean-char or string boundary
+        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(?<=[\\s,。.!?'"「」『』【】（）()\\[\\]「」、…—–:;/\\\\]|^)${escaped}(?=[\\s,。.!?'"「」『』【】（）()\\[\\]「」、…—–:;/\\\\]|$)`, "u");
+        return re.test(src);
+      }
+      return src.includes(kw);
+    };
+
     entityRules.forEach((rule) => {
       rule.keywords.forEach((kw) => {
-        if (text.includes(kw)) {
+        if (keywordMatches(text, kw)) {
           addEntity(rule.type, kw);
         }
       });
