@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/logo/eeum-logo.png" alt="이음 로고" width="220" />
+</p>
+
 # 이음 (EEUM)
 
 **세대 간 연결 회상 및 기억 건강 플랫폼**
