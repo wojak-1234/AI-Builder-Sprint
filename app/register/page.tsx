@@ -147,13 +147,26 @@ function RegisterContent() {
   };
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-between min-h-screen bg-background text-foreground px-6 py-12 relative transition-colors duration-300">
-      {/* Visual background grids */}
-      <div className="absolute top-0 left-[8%] w-[1px] h-full bg-primary/5 pointer-events-none hidden sm:block" />
-      <div className="absolute top-0 right-[8%] w-[1px] h-full bg-primary/5 pointer-events-none hidden sm:block" />
+    <div className="flex flex-col flex-1 items-center justify-between min-h-screen text-foreground px-6 py-12 relative overflow-hidden transition-colors duration-300">
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none"
+        src="/videos/8087608-uhd_2160_4096_24fps.mp4"
+      />
+
+      {/* Dark Overlay with subtle backdrop blur for video readability */}
+      <div className="fixed inset-0 bg-black/55 backdrop-blur-[2px] pointer-events-none z-0" />
+
+      {/* Visual background grid lines */}
+      <div className="absolute top-0 left-[8%] w-[1px] h-full bg-white/10 pointer-events-none hidden sm:block z-0" />
+      <div className="absolute top-0 right-[8%] w-[1px] h-full bg-white/10 pointer-events-none hidden sm:block z-0" />
 
       {/* Header controls */}
-      <header className="w-full max-w-lg mx-auto flex items-center justify-between pb-4 border-b border-border z-10">
+      <header className="w-full max-w-lg mx-auto flex items-center justify-between pb-4 border-b border-white/20 z-10">
         {mode !== "entry" ? (
           <button
             onClick={() => {
@@ -164,19 +177,19 @@ function RegisterContent() {
                 setMode("entry");
               }
             }}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm font-serif cursor-pointer"
+            className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors text-sm font-serif cursor-pointer"
           >
             <ArrowLeft size={16} />
             돌아가기
           </button>
         ) : (
-          <div className="text-muted-foreground font-serif text-xs select-none">이음 서실</div>
+          <div className="text-white/70 font-serif text-xs select-none">이음 서실</div>
         )}
         
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
           {mode === "register-steps" && (
-            <span className="text-muted-foreground font-serif text-xs select-none">
+            <span className="text-white/80 font-serif text-xs select-none">
               {role === "self" ? "어르신 가입" : "보호자 가입"} ({step}/4)
             </span>
           )}
@@ -188,7 +201,7 @@ function RegisterContent() {
         
         {/* MODE 1: ENTRY SCREEN (Choice between Login and Signup) */}
         {mode === "entry" && (
-          <div className="p-8 rounded-2xl bg-secondary border border-border shadow-sm text-center flex flex-col items-center gap-6">
+          <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-center flex flex-col items-center gap-6">
             <div className="h-24 w-auto relative select-none shrink-0">
               <img
                 src="/logo/lightmodenew.jpg"
@@ -221,7 +234,7 @@ function RegisterContent() {
 
         {/* MODE 2: LOGIN SCREEN */}
         {mode === "login" && (
-          <div className="p-8 rounded-2xl bg-secondary border border-border shadow-sm text-left flex flex-col gap-6">
+          <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-left flex flex-col gap-6">
             <div>
               <h2 className="text-2xl font-serif font-bold text-primary">기록첩 열기</h2>
               <p className="text-xs text-muted-foreground mt-1">등록하셨던 이메일과 계정 열쇠를 사용해 로그인합니다.</p>
@@ -256,7 +269,7 @@ function RegisterContent() {
               />
             </div>
 
-            <div className="text-[11px] text-muted-foreground bg-background border border-border/50 p-3.5 rounded-xl leading-relaxed select-none">
+            <div className="text-[11px] text-muted-foreground bg-background/80 backdrop-blur-xs border border-border/50 p-3.5 rounded-xl leading-relaxed select-none">
               💡 <strong>데모 체험 안내:</strong><br />
               이메일 <strong className="text-primary">soonja@eeum.com</strong> (어르신) 또는 <strong className="text-primary">jiyoung@eeum.com</strong> (자녀)을 입력하고 비밀번호는 아무 글자나 입력하시면 준비된 테스트 데이터로 바로 체험하실 수 있습니다.
             </div>
@@ -270,7 +283,7 @@ function RegisterContent() {
 
         {/* MODE 3: ROLE SELECT */}
         {mode === "role-select" && (
-          <div className="p-8 rounded-2xl bg-secondary border border-border shadow-sm text-left flex flex-col gap-6">
+          <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-left flex flex-col gap-6">
             <div className="text-center w-full">
               <span className="text-xs font-serif font-bold text-highlight block">역할을 선택하여 가입 진행</span>
               <h2 className="text-2xl font-serif font-bold text-primary mt-1.5">어떤 기록첩을 시작할까요?</h2>
@@ -284,7 +297,7 @@ function RegisterContent() {
                   setStep(1);
                   setErrors({});
                 }}
-                className="flex items-center justify-between w-full p-5 rounded-2xl bg-background border border-border hover:border-primary/40 hover:opacity-95 transition-all text-left cursor-pointer group shadow-sm active:scale-98"
+                className="flex items-center justify-between w-full p-5 rounded-2xl bg-background/80 hover:bg-background border border-border hover:border-primary/40 hover:opacity-95 transition-all text-left cursor-pointer group shadow-sm active:scale-98"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -307,7 +320,7 @@ function RegisterContent() {
                   setStep(1);
                   setErrors({});
                 }}
-                className="flex items-center justify-between w-full p-5 rounded-2xl bg-background border border-border hover:border-primary/40 hover:bg-muted/30 transition-all text-left cursor-pointer group shadow-sm active:scale-98"
+                className="flex items-center justify-between w-full p-5 rounded-2xl bg-background/80 hover:bg-background border border-border hover:border-primary/40 hover:bg-muted/30 transition-all text-left cursor-pointer group shadow-sm active:scale-98"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -328,7 +341,7 @@ function RegisterContent() {
 
         {/* MODE 4: STEP WIZARD */}
         {mode === "register-steps" && (
-          <div className="p-8 rounded-2xl bg-secondary border border-border shadow-sm text-left">
+          <div className="p-8 rounded-3xl bg-secondary/90 dark:bg-secondary/90 backdrop-blur-md border border-border shadow-xl text-left">
             
             {/* STEP 1: 기본 정보 입력 */}
             {step === 1 && (
