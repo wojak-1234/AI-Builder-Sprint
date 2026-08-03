@@ -22,27 +22,7 @@ export default function EntryPage() {
 
   const handleStartDemo = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (typeof window !== "undefined") {
-      const existingUser = localStorage.getItem("eeum_mock_curr_user");
-      if (!existingUser) {
-        const defaultUser = {
-          id: "user-elderly-123",
-          role: "self",
-          name: "김순자 어르신",
-          email: "soonja@eeum.com",
-          dob: "1945-03-10",
-          userCode: "UM-709",
-          textSize: "large",
-          colorVision: "default",
-          questionFrequency: "once",
-          appPurpose: "Memory Recording",
-          created_at: new Date().toISOString(),
-        };
-        localStorage.setItem("eeum_mock_curr_user", JSON.stringify(defaultUser));
-        window.dispatchEvent(new Event("eeum_user_changed"));
-      }
-    }
-    router.push("/home");
+    router.push("/register");
   };
 
   return (
@@ -104,7 +84,7 @@ export default function EntryPage() {
             <span className="text-neutral-200">마음을 이음</span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-neutral-300 max-w-xl mt-4 font-sans leading-relaxed drop-shadow-sm font-light">
-            부모님의 오래된 손글씨 일기, 한 장의 옛 편지, 흐릿해진 사진들을 고요히 한 지면에 옮겨 적습니다. 인공지능이 건네는 다정한 질문들은 어르신의 소중한 과거 기억을 자극하고, 자녀의 기억 조각과 만나 하나의 마인드맵으로 엮입니다.
+            오래된 일기와 편지, 사진 속 기억을 다정한 질문으로 이끌어내어 자녀의 기억과 하나의 마인드맵으로 엮어드립니다.
           </p>
           <div className="mt-6 flex flex-wrap gap-4">
             <button
@@ -143,7 +123,7 @@ export default function EntryPage() {
               따뜻한 연결을 위한 디지털 기억 정원
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground font-sans leading-relaxed max-w-2xl font-light">
-              이음은 단순한 저장소를 넘어, 잊혀가는 부모님의 소중한 삶의 궤적을 복원하고 세대 간 대화의 통로를 열어주는 따뜻한 동행입니다.
+              잊혀가는 부모님의 삶의 궤적을 복원하고, 세대 간 대화의 통로를 열어주는 동행입니다.
             </p>
           </div>
 
@@ -157,7 +137,7 @@ export default function EntryPage() {
               <span className="text-xs font-serif font-bold text-highlight mb-1">기록의 보관</span>
               <h3 className="text-xl font-serif font-bold text-primary mb-3">옛 일기 디지털 변환</h3>
               <p className="text-sm text-muted-foreground leading-relaxed font-sans font-light">
-                오래된 손글씨나 빛바랜 서신을 사진으로 담으면, 인공지능이 인물과 장소, 날짜를 차분히 가려내어 정갈한 서체로 인쇄하듯 보관합니다.
+                사진으로 담은 손글씨와 편지를 인공지능이 정갈한 서체로 옮겨 보관합니다.
               </p>
             </div>
 
@@ -169,7 +149,7 @@ export default function EntryPage() {
               <span className="text-xs font-serif font-bold text-highlight mb-1">인지의 자극</span>
               <h3 className="text-xl font-serif font-bold text-primary mb-3">기억 환기용 질문</h3>
               <p className="text-sm text-muted-foreground leading-relaxed font-sans font-light">
-                기존의 일상 일대기 데이터와 연동하여, 부모님이 직접 삶의 한 자락을 깊이 돌아볼 수 있도록 정답 없는 회상 유도 질문을 조용히 건넵니다.
+                정답 없는 회상 질문으로 부모님이 삶의 한 자락을 조용히 돌아보도록 이끕니다.
               </p>
             </div>
 
@@ -181,7 +161,7 @@ export default function EntryPage() {
               <span className="text-xs font-serif font-bold text-highlight mb-1">마음의 병합</span>
               <h3 className="text-xl font-serif font-bold text-primary mb-3">세대 간 기억의 병치</h3>
               <p className="text-sm text-muted-foreground leading-relaxed font-sans font-light">
-                부모님과 자녀가 동일한 삶의 사건에 다르게 답하더라도, 옳고 그름의 판정 없이 각자의 기억을 하나의 마인드맵 위에 소중히 나열해 줍니다.
+                부모님과 자녀의 기억을 판정 없이 하나의 마인드맵 위에 나란히 담아냅니다.
               </p>
             </div>
           </div>
@@ -220,7 +200,7 @@ export default function EntryPage() {
                 나무의 나이테처럼 겹겹이 쌓이는 인생의 순간들
               </h3>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-sans font-light">
-                이음은 어르신의 삶을 선형적 시간표가 아닌, 나이테처럼 유기적으로 얽힌 기억의 동심원으로 시각화합니다. 가장 중심의 어린 시절 기억부터 겉 테두리의 최근 기억까지, AI가 설계한 유기적인 대화 흐름을 따라 자연스럽게 회상할 수 있습니다.
+                어르신의 삶을 시간표가 아닌, 나이테 같은 기억의 동심원으로 시각화하여 자연스럽게 회상하도록 돕습니다.
               </p>
               <ul className="flex flex-col gap-3 mt-2 text-sm sm:text-base text-muted-foreground font-sans font-light">
                 <li className="flex items-start gap-2.5">
